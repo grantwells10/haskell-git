@@ -1,12 +1,12 @@
 cabal-version:  2.2
 name:           hgit
 version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/sidsann/hgit#readme>
-homepage:       https://github.com/sidsann/hgit#readme
-bug-reports:    https://github.com/sidsann/hgit/issues
-author:         Sid Sannapareddy, Grant Wells
-maintainer:     sannapareddysiddharth@gmail.com, gawells@seas.upenn.edu
-copyright:      2024 Sid Sannapareddy, Grant Wells
+description:    Please see the README on GitHub at <https://github.com/grantwells10/hgit#readme>
+homepage:       https://github.com/grantwells10/hgit#readme
+bug-reports:    https://github.com/grantwells10/hgit/issues
+author:         Grant Wells, Sid Sannapareddy
+maintainer:     gawells@seas.upenn.edu, sannapareddysiddharth@gmail.com, 
+copyright:      2024 Grant Wells, Sid Sannapareddy
 license:        BSD-3-Clause
 license-file:   LICENSE
 build-type:     Simple
@@ -16,7 +16,7 @@ extra-source-files:
 
 source-repository head
   type: git
-  location: https://github.com/sidsann/hgit
+  location: https://github.com/grantwells10/hgit
 
 common common-stanza
   ghc-options:         -Wno-type-defaults -fwarn-incomplete-patterns
