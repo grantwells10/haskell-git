@@ -3,7 +3,7 @@ module CommandParser (parseInput, Command(..), CommandError(..), ParsedCommand (
 import Data.List (find, isPrefixOf)
 
 data Command = Command 
-  { subcommand :: String,
+  { subcommand :: String, -- git commit -> commit is the subcommand
     description :: String,
     flags :: [Flag],
     args :: [String]

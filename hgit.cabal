@@ -49,6 +49,7 @@ library
       Branch
       CommandParser
       CommandHandler
+      Commands
       Commit
       Config
       FileIO

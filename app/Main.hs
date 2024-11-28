@@ -9,10 +9,10 @@ import Control.Monad (unless)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Except (except)
-
+import Commands (initCmd)
 
 commands :: [Command]
-commands = [] -- define the commands later
+commands = [initCmd] -- add more commands here
 
 main :: IO ()
 main = do
@@ -21,9 +21,9 @@ main = do
     -- Parse the input
     cmd <- except $ parseInput commands $ words input
     -- Handle the command
-    output <- except $ commandHandler cmd
-    -- Print the output if it is not empty
-    unless (null output) $ liftIO $ putStrLn output
+    result <- except $ commandHandler cmd
+    -- Execute the command
+    liftIO result
   -- Handle errors
   case result of
     Left (CommandError errMsg) -> putStrLn $ "[ERROR] " ++ errMsg

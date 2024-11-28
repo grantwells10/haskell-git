@@ -3,6 +3,9 @@ module Hash
     decompress,
     sha1Hash,
     byteStringToText,
+    textToByteString,
+    stringToBS,
+    bsToString
   )
 where
 
@@ -31,9 +34,21 @@ decompress bs =
 sha1Hash :: BS.ByteString -> String
 sha1Hash bs = concatMap (`showHex` "") $ BS.unpack $ SHA1.hash bs
 
--- Converts a decompressed ByteString to Text
+-- Converts a ByteString to Text
 byteStringToText :: BS.ByteString -> Either String T.Text
 byteStringToText bs =
   case TE.decodeUtf8' bs of
     Right text -> Right text
     Left err -> Left $ "Text decoding error: " ++ show err
+
+-- Converts a Text to a ByteString
+textToByteString :: T.Text -> BS.ByteString
+textToByteString = TE.encodeUtf8
+
+-- Converts String to ByteString
+stringToBS :: String -> BS.ByteString
+stringToBS = TE.encodeUtf8 . T.pack
+
+-- Converts ByteString to String
+bsToString :: BS.ByteString -> String
+bsToString = T.unpack . TE.decodeUtf8
