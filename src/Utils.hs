@@ -190,12 +190,7 @@ compress = BL.toStrict . Zlib.compress . BL.fromStrict
 
 -- Decompresses a strict ByteString using zlib
 decompress :: BS.ByteString -> Either String BS.ByteString
-decompress bs =
-  case safeDecompress bs of
-    Left err -> Left $ "Decompression error: " ++ err
-    Right result -> Right $ BL.toStrict result
-  where
-    safeDecompress input = Right (Zlib.decompress $ BL.fromStrict input)
+decompress bs = Right $ BL.toStrict $ Zlib.decompress $ BL.fromStrict bs
 
 -- | Pads a single hex digit with a leading zero if necessary
 padZero :: String -> String
