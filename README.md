@@ -1,7 +1,5 @@
 # Haskell Git (hgit)
 
-![HGIT](https://github.com/user-attachments/assets/1606293e-4530-4299-a9ba-9c40deaa5706)
-
 ## TL;DR 
 A lightweight, pure Haskell library implementing core Git functionality for local-only repositories.
 
