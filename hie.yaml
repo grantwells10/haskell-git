@@ -1,3 +1,8 @@
 cradle:
   stack:
-    component: "hgit:lib"
+    stackYaml: "./stack.yaml"
+    components:
+      - path: "./test"
+        component: "hgit:test:hgit-test"
+      - path: "./src"
+        component: "hgit:lib"
