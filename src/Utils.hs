@@ -207,11 +207,30 @@ getObjectsPath = do
 
 -- | Get type of object from OID
 getObjectType :: String -> IO (Either String String)
-getObjectType oid = undefined
+getObjectType oid = do
+    result <- readAndDecompressObject oid
+    case result of
+        Left err -> return $ Left err
+        Right content -> do
+            let firstLine = BS8.takeWhile (/= '\n') content
+            -- timestamp -> commit
+            if BS8.isInfixOf (BS8.pack "timestamp") content
+                then return $ Right "commit"
+            -- "blob <oid> <name>" -> tree
+            else if BS8.isInfixOf (BS8.pack " ") firstLine 
+                 && (length (BS8.words firstLine) == 3)
+                then return $ Right "tree"
+            -- else -> blob
+            else return $ Right "blob"
 
 -- | Get content of object from OID 
 getObjectContent :: String -> IO (Either String String)
-getObjectContent oid = undefined
+getObjectContent oid = do
+    result <- readAndDecompressObject oid
+    case result of
+        Left err -> return $ Left err
+        Right content -> 
+            return $ Right $ BS8.unpack content
 
 -- | Constructs the full path to a branch within refs/heads
 getHeadPath :: String -> IO FilePath

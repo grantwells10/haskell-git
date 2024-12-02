@@ -105,6 +105,7 @@ handleCommit flags args = do
   let timestamp = formatTime defaultTimeLocale "%s" currentTime
   parentOid <- getCurrentCommitOid
   let commitContent = createCommitContent treeOid parentOid timestamp commitMsg
+  -- COMMIT OBJECT CREATION
   commitOid <- createObject commitContent
   updateHEAD commitOid
   return ""

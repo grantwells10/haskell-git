@@ -172,6 +172,7 @@ processFileContents indexMap filepath = do
       if existingOid == Just oid
         then return $ Right Nothing -- No changes needed
         else do
+          -- BLOB OBJECT CREATION
           createObject content
           return $ Right $ Just (normalizedPath, oid)
     else do

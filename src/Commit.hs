@@ -125,7 +125,7 @@ buildTreeRecursive dirPath indexMap = do
 
   let treeContent = BS.concat $ sort $ blobTreeEntries ++ treeTreeEntries
 
-  -- Create tree object and return its OID
+  -- Create tree object and return its OID (TREE OBJECT CREATION)
   createObject treeContent
 
 -- | Collect unique subdirectories, excluding the current directory
