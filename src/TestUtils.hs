@@ -2,7 +2,6 @@
 
 module TestUtils
   ( testValidate,
-    letCommands,
     createFiles,
     runCommand,
     runAddCommand,
@@ -13,7 +12,7 @@ module TestUtils
   )
 where
 
-import CommandHandler (commandHandler, commands)
+import CommandHandler (commandHandler)
 import CommandParser
   ( Command (Command, flags, subcommand),
     CommandError (..),
@@ -92,13 +91,11 @@ import Test.QuickCheck
     (==>),
   )
 import Utils ( doesDirectoryExist, readFileAsByteString, sha1Hash )
+import Commands (commandInit, commandAdd, commandCommit, commandBranch)
 
 -- | Validation function that allows any flags and arguments
 testValidate :: [(String, Maybe String)] -> [String] -> Either CommandError ()
 testValidate _ _ = Right ()
-
-letCommands :: [Command]
-letCommands = commands
 
 -- | Helper function to create multiple files with specified content
 createFiles :: [(FilePath, String)] -> IO ()
@@ -118,8 +115,7 @@ runCommand cmd flags args = do
 -- | Runs the 'git add' command with given flags and arguments
 runAddCommand :: [(String, Maybe String)] -> [String] -> IO ()
 runAddCommand flags args = do
-  let addCmd = letCommands !! 1 -- "add" command
-  resultAdd <- runCommand addCmd flags args
+  resultAdd <- runCommand commandAdd flags args
   case resultAdd of
     Left (CommandError err) -> assertFailure $ "Add command failed: " ++ err
     Right _ -> return ()
@@ -127,8 +123,7 @@ runAddCommand flags args = do
 -- | Runs the 'git commit' command with given flags and arguments
 runCommitCommand :: [(String, Maybe String)] -> [String] -> IO ()
 runCommitCommand flags args = do
-  let commitCmd = letCommands !! 2 -- "commit" command
-  resultCommit <- runCommand commitCmd flags args
+  resultCommit <- runCommand commandCommit flags args
   case resultCommit of
     Left (CommandError err) -> assertFailure $ "Commit command failed: " ++ err
     Right _ -> return ()
@@ -173,8 +168,7 @@ withTestRepo action = do
   setCurrentDirectory testDir
 
   -- Initialize repository
-  let initCmd = head letCommands -- "init" command
-  resultInit <- runCommand initCmd [] []
+  resultInit <- runCommand commandInit [] []
   case resultInit of
     Left (CommandError err) -> do
       setCurrentDirectory originalDir

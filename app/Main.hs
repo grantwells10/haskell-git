@@ -1,12 +1,13 @@
 module Main where
 
-import CommandHandler (commandHandler, commands)
+import CommandHandler (commandHandler)
 import CommandParser (Command (..), CommandError (..), parseInput)
 import Control.Monad (unless)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Except (except)
 import System.Environment (getArgs)
+import Commands (commands)
 
 main :: IO ()
 main = do

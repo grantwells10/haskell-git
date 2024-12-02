@@ -40,7 +40,8 @@ import Data.Text qualified as T
 import Data.Text.Encoding.Error (UnicodeException)
 import System.FilePath (takeDirectory, (</>))
 import Data.Set qualified as Set
-import TestUtils ( testValidate, letCommands )
+import TestUtils ( testValidate )
+import Commands (commandInit, commandAdd, commandCommit, commandBranch)
 
 -- Parsing-related Tests
 
@@ -48,13 +49,13 @@ testParseCommand :: Test
 testParseCommand =
   TestList
     [ "Valid Command 'add'"
-        ~: parseCommand letCommands ["add"]
-        ~?= Right (letCommands !! 1, []),
+        ~: parseCommand [commandAdd] ["add"]
+        ~?= Right (commandAdd, []),
       "Valid Command 'init'"
-        ~: parseCommand letCommands ["init"]
-        ~?= Right (head letCommands, []),
+        ~: parseCommand [commandInit] ["init"]
+        ~?= Right (commandInit, []),
       "Invalid Command"
-        ~: parseCommand letCommands ["status"]
+        ~: parseCommand [commandAdd, commandInit, commandCommit, commandBranch] ["status"]
         ~?= Left (CommandError "Unknown command: status")
     ]
 
@@ -62,16 +63,16 @@ testParseFlagsAndArgs :: Test
 testParseFlagsAndArgs =
   TestList
     [ "Parse no-arg flag (--update)"
-        ~: parseFlagsAndArgs (flags $ letCommands !! 1) ["--update"]
+        ~: parseFlagsAndArgs (flags commandAdd) ["--update"]
         ~?= Right ([("update", Nothing)], []),
       "Parse short flag (-u)"
-        ~: parseFlagsAndArgs (flags $ letCommands !! 1) ["-u"]
+        ~: parseFlagsAndArgs (flags commandAdd) ["-u"]
         ~?= Right ([("update", Nothing)], []),
       "Parse arguments"
-        ~: parseFlagsAndArgs (flags $ letCommands !! 1) ["file1.txt", "file2.txt"]
+        ~: parseFlagsAndArgs (flags $ commandAdd) ["file1.txt", "file2.txt"]
         ~?= Right ([], ["file1.txt", "file2.txt"]),
       "Parse flags and arguments"
-        ~: parseFlagsAndArgs (flags $ letCommands !! 1) ["--update", "file1.txt"]
+        ~: parseFlagsAndArgs (flags $ commandAdd) ["--update", "file1.txt"]
         ~?= Right ([("update", Nothing)], ["file1.txt"])
     ]
 
@@ -79,40 +80,40 @@ testParseInput :: Test
 testParseInput =
   TestList
     [ "Parse 'add' with no flags or args"
-        ~: parseInput letCommands ["add"]
+        ~: parseInput [commandAdd] ["add"]
         ~?= Left (CommandError "Invalid usage of 'hgit add'. Use 'hgit add -u', 'hgit add <file>... ', or 'hgit add .'"),
       "Parse 'add' with --update flag"
-        ~: parseInput letCommands ["add", "--update"]
+        ~: parseInput [commandAdd] ["add", "--update"]
         ~?= Right
           ( ParsedCommand
-              { parsedSubcommand = letCommands !! 1,
+              { parsedSubcommand = commandAdd,
                 parsedFlags = [("update", Nothing)],
                 parsedArguments = []
               }
           ),
       "Parse 'add' with files"
-        ~: parseInput letCommands ["add", "file1.txt", "file2.txt"]
+        ~: parseInput [commandAdd] ["add", "file1.txt", "file2.txt"]
         ~?= Right
           ( ParsedCommand
-              { parsedSubcommand = letCommands !! 1,
+              { parsedSubcommand = commandAdd,
                 parsedFlags = [],
                 parsedArguments = ["file1.txt", "file2.txt"]
               }
           ),
       "Parse 'add' with flags and files"
-        ~: parseInput letCommands ["add", "-u", "file1.txt"]
+        ~: parseInput [commandAdd] ["add", "-u", "file1.txt"]
         ~?= Left (CommandError "Invalid usage of 'hgit add'. Use 'hgit add -u', 'hgit add <file>... ', or 'hgit add .'"),
       "Parse 'init' with no flags or args"
-        ~: parseInput letCommands ["init"]
+        ~: parseInput [commandInit] ["init"]
         ~?= Right
           ( ParsedCommand
-              { parsedSubcommand = head letCommands,
+              { parsedSubcommand = commandInit,
                 parsedFlags = [],
                 parsedArguments = []
               }
           ),
       "Parse 'init' with unexpected args"
-        ~: parseInput letCommands ["init", "extra"]
+        ~: parseInput [commandInit] ["init", "extra"]
         ~?= Left (CommandError "This command does not accept any flags or arguments.")
     ]
 

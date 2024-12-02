@@ -27,13 +27,13 @@ import Test.HUnit
   )
 import Utils ( sha1Hash )
 import TestUtils
-    ( letCommands,
-      createFiles,
+    ( createFiles,
       runCommand,
       runAddCommand,
       verifyIndex,
       verifyBlobExists,
       withTestRepo )
+import Commands (commandAdd)
 
 -- | Test adding a single file
 testAddSingleFile :: Test
@@ -196,14 +196,13 @@ testAddInvalidCombinations = TestCase $ withTestRepo $ \testDir -> do
   createFiles [("file1.txt", "Hello World")]
 
   -- Attempt to combine 'git add -u' with 'git add .'
-  let addCmd = letCommands !! 1 -- "add" command
   let parsedAddCmd =
         ParsedCommand
-          { parsedSubcommand = addCmd,
+          { parsedSubcommand = commandAdd,
             parsedFlags = [("update", Nothing)],
             parsedArguments = ["."]
           }
-  resultAdd <- runCommand addCmd [("update", Nothing)] ["."]
+  resultAdd <- runCommand commandAdd [("update", Nothing)] ["."]
   case resultAdd of
     Left (CommandError _) -> return () -- Expected to fail
     Right _ -> assertFailure "Combining 'add -u' with '.' should fail"
@@ -211,11 +210,11 @@ testAddInvalidCombinations = TestCase $ withTestRepo $ \testDir -> do
   -- Attempt to combine 'git add -u' with specific files
   let parsedAddCmd2 =
         ParsedCommand
-          { parsedSubcommand = addCmd,
+          { parsedSubcommand = commandAdd,
             parsedFlags = [("update", Nothing)],
             parsedArguments = ["file1.txt"]
           }
-  resultAdd2 <- runCommand addCmd [("update", Nothing)] ["file1.txt"]
+  resultAdd2 <- runCommand commandAdd [("update", Nothing)] ["file1.txt"]
   case resultAdd2 of
     Left (CommandError _) -> return () -- Expected to fail
     Right _ -> assertFailure "Combining 'add -u' with specific files should fail"

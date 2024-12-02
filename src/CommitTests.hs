@@ -28,19 +28,19 @@ import System.FilePath (splitDirectories, takeDirectory, takeFileName, (</>))
 import Test.HUnit
     ( assertBool, assertEqual, assertFailure, Test(..) )
 import TestUtils
-    ( letCommands,
-      createFiles,
+    ( createFiles,
       runCommand,
       runAddCommand,
       runCommitCommand,
       withTestRepo )
 import Utils ( getHeadCommitOid )
 import System.Directory (removeFile, removeDirectoryRecursive)
+import Commands (commandCommit)
 
 -- | Asserts that a commit command fails with a CommandError
 assertCommitFailure :: [(String, Maybe String)] -> [String] -> IO ()
 assertCommitFailure flags args = do
-  let commitCmd = letCommands !! 2 -- "commit" command
+  let commitCmd = commandCommit -- "commit" command
   result <- runCommand commitCmd flags args
   case result of
     Left _ -> return () -- Expected to fail
