@@ -23,7 +23,10 @@ module Utils
     textToByteString,
     stringToByteString,
     byteStringToString,
-    getHeadCommitOid
+    getHeadCommitOid,
+    getObjectType,
+    getObjectContent,
+    isInRepository
   )
 where
 import Control.Exception
@@ -40,7 +43,6 @@ import Data.Time.Clock (getCurrentTime)
 import Data.Time.Format (defaultTimeLocale, formatTime)
 import System.Directory
     ( createDirectoryIfMissing,
-      doesDirectoryExist,
       doesFileExist,
       getCurrentDirectory,
       listDirectory,
@@ -111,8 +113,9 @@ createObject content = do
 -- | Helper function to read and decompress an object
 readAndDecompressObject :: String -> IO (Either String BS.ByteString)
 readAndDecompressObject oid = do
+  objectsPath <- getObjectsPath
   let (dir, file) = splitAt 2 oid
-  let objectPath = ".hgit/objects" </> dir </> file
+  let objectPath = objectsPath </> dir </> file
   exists <- doesFileExist objectPath
   if not exists
     then return $ Left $ "Object does not exist: " ++ oid
@@ -145,11 +148,44 @@ createFileIfMissing path = do
 
 -- | FILEPATH GETTERS
 
--- | Gets the path to the .hgit directory in the current working directory
+-- | Helper function to find .hgit directory by traversing up until root
+findHgitDirectory :: FilePath -> IO (Either String FilePath)
+findHgitDirectory dir = do
+    let hgitPath = dir </> ".hgit"
+    exists <- doesDirectoryExist hgitPath
+    if exists
+        then return $ Right hgitPath
+        else if dir == takeDirectory dir  -- root
+            then return $ Left "Not a hgit repository"
+            else findHgitDirectory (takeDirectory dir)
+
+-- | Gets the path to the .hgit directory
 getHgitPath :: IO FilePath
 getHgitPath = do
-  currentDir <- getCurrentDirectory
-  return $ currentDir </> ".hgit"
+    currentDir <- getCurrentDirectory
+    if takeFileName currentDir == ".hgit"
+        then return currentDir
+        else do
+            result <- findHgitDirectory currentDir
+            case result of
+                Left _ -> return $ currentDir </> ".hgit"
+                Right path -> return path
+
+-- | Verifies we are working in a hgit repository
+isInRepository :: IO Bool
+isInRepository = do
+    currentDir <- getCurrentDirectory
+    if isInHgitDir currentDir
+        then return True
+        else do
+            result <- findHgitDirectory currentDir
+            case result of
+                -- Error, didnt find .hgit, return false
+                Left _ -> return False
+                -- Found .hgit, return true
+                Right _ -> return True
+  where
+    isInHgitDir dir = ".hgit" `elem` splitDirectories dir
 
 -- | Gets the path to the refs directory within .hgit
 getRefsPath :: IO FilePath
@@ -168,6 +204,14 @@ getObjectsPath :: IO FilePath
 getObjectsPath = do
   hgitPath <- getHgitPath
   return $ hgitPath </> "objects"
+
+-- | Get type of object from OID
+getObjectType :: String -> IO (Either String String)
+getObjectType oid = undefined
+
+-- | Get content of object from OID 
+getObjectContent :: String -> IO (Either String String)
+getObjectContent oid = undefined
 
 -- | Constructs the full path to a branch within refs/heads
 getHeadPath :: String -> IO FilePath

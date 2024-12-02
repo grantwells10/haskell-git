@@ -17,17 +17,22 @@ import Utils
       createDirectoryIfMissing',
       createFileIfMissing,
       getHgitPath,
+      isInRepository,
       getHeadsPath,
       getObjectsPath,
       getHeadPath,
       getHEADFilePath,
-      stringToByteString )
+      stringToByteString, 
+      getObjectType,
+      getObjectContent
+      )
 import Branch ( listBranches, createBranch, deleteBranch )
 import Commands
   ( commandInit,
     commandAdd,
     commandCommit,
-    commandBranch
+    commandBranch,
+    commandCatFile
     -- Import more commands here as added
   )
 
@@ -40,8 +45,8 @@ commandHandler parsedCmd = do
 
   -- Check if the repository exists for all commands except 'init'
   when (cmdStr /= "init") $ do
-    repoExists <- doesDirectoryExist =<< getHgitPath
-    unless repoExists $
+    inRepo <- isInRepository
+    unless inRepo $
       throwIO $
         userError ".hgit doesn't exist, call 'hgit init' first"
 
@@ -51,7 +56,7 @@ commandHandler parsedCmd = do
     "add" -> handleAdd flags args
     "commit" -> handleCommit flags args
     "branch" -> handleBranch flags args
-
+    "cat-file" -> handleCatFile flags args
     -- Add other command handlers here
     _ -> throwIO $ userError $ "Unknown subcommand: " ++ cmdStr
 
@@ -62,9 +67,8 @@ commandHandler parsedCmd = do
 
 handleInit :: IO String
 handleInit = do
-  hgitPath <- getHgitPath
-  repoExists <- doesDirectoryExist hgitPath
-  if repoExists
+  inRepo <- isInRepository
+  if inRepo
     then return "hgit repository already exists. No action taken."
     else do
       initializeRepository
@@ -121,3 +125,19 @@ handleBranch flags args = do
           return $ "Branch '" ++ branchName ++ "' created."
         _ -> throwIO $ userError "Invalid usage of 'hgit branch'. Use 'hgit branch', 'hgit branch <branchname>', or 'hgit branch -d <branchname>'."
     _ -> throwIO $ userError "Invalid usage of 'hgit branch'. Use 'hgit branch', 'hgit branch <branchname>', or 'hgit branch -d <branchname>'."
+
+handleCatFile :: [(String, Maybe String)] -> [String] -> IO String
+handleCatFile flags [hash] = do
+  case flags of
+    [("type", Nothing)] -> do
+      result <- getObjectType hash
+      case result of
+        Left err -> throwIO $ userError err
+        Right typeStr -> return typeStr
+    [("pretty", Nothing)] -> do
+      result <- getObjectContent hash
+      case result of
+        Left err -> throwIO $ userError err
+        Right contentStr -> return contentStr
+    _ -> throwIO $ userError "Invalid usage of 'hgit cat-file'. Use 'hgit cat-file (-t|-p) <object-hash>'."
+handleCatFile _ _ = throwIO $ userError "Invalid usage of 'hgit cat-file'. Use 'hgit cat-file (-t|-p) <object-hash>'."

@@ -3,7 +3,8 @@ module Commands
     commandInit,
     commandAdd,
     commandCommit,
-    commandBranch
+    commandBranch,
+    commandCatFile
     -- Add more commands here as needed
   )
 where
@@ -18,6 +19,7 @@ commands =
   , commandAdd
   , commandCommit
   , commandBranch
+  , commandCatFile
   ]
 
 -- | Init Command
@@ -70,6 +72,22 @@ commandBranch = Command
     validate = validateBranchCommand
   }
 
+-- | Cat File Command
+commandCatFile :: Command
+commandCatFile = Command
+  { subcommand = "cat-file",
+    description = 
+      "Display information about git objects.\n\
+      \Usage:\n\
+      \  hgit cat-file -t <object-hash>   Show object type\n\
+      \  hgit cat-file -p <object-hash>   Pretty-print object contents",
+    flags =
+      [ Flag { longName = "type", shortName = Just "t", flagType = NoArg }
+      , Flag { longName = "pretty", shortName = Just "p", flagType = NoArg }
+      ],
+    validate = validateCatFileCommand
+  }
+
 -- Add more command definitions here as needed
 
 -- Validation functions
@@ -98,3 +116,10 @@ validateBranchCommand flags args =
         [branchName] -> Right () -- Creating a branch
         _ -> Left $ CommandError "Invalid usage of 'hgit branch'. Use 'hgit branch', 'hgit branch <branchname>', or 'hgit branch -d <branchname>'."
     _ -> Left $ CommandError "Invalid flags for 'hgit branch'. Use '-d <branchname>' to delete a branch."
+
+validateCatFileCommand :: [(String, Maybe String)] -> [String] -> Either CommandError ()
+validateCatFileCommand flags args =
+  case (flags, args) of
+    ([("type", Nothing)], [hash]) -> Right ()
+    ([("pretty", Nothing)], [hash]) -> Right ()
+    _ -> Left $ CommandError "Invalid usage of 'hgit cat-file'. Use 'hgit cat-file (-t|-p) <object-hash>'"
