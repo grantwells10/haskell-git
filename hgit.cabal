@@ -1,18 +1,17 @@
 cabal-version:  2.2
 name:           hgit
-version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/grantwells10/hgit#readme>
-homepage:       https://github.com/grantwells10/hgit#readme
-bug-reports:    https://github.com/grantwells10/hgit/issues
-author:         Grant Wells, Sid Sannapareddy
-maintainer:     gawells@seas.upenn.edu, sannapareddysiddharth@gmail.com, 
-copyright:      2024 Grant Wells, Sid Sannapareddy
+version:        0.8.0.0
+description:    Please see the README on GitHub at <https://github.com/sidsann/hgit#readme>
+homepage:       https://github.com/sidsann/hgit#readme
+bug-reports:    https://github.com/sidsann/hgit/issues
+author:         Sid Sannapareddy, Grant Wells
+maintainer:     sannapareddysiddharth@gmail.com, gawells@seas.upenn.edu
+copyright:      2024 Sid Sannapareddy, Grant Wells
 license:        BSD-3-Clause
 license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
     README.md
-    ChangeLog.md
 
 source-repository head
   type: git
@@ -32,6 +31,13 @@ common common-stanza
     , random
     , mtl
     , doctest
+    , transformers >0.6.0.5
+    , text >= 2.1.2
+    , bytestring
+    , zlib
+    , cryptohash-sha1
+    , diff3
+    , time
   default-language:
     GHC2021
   default-extensions:
@@ -41,13 +47,29 @@ library
   import:
       common-stanza
   exposed-modules:
-      Lib
+      Branch
+      CommandParser
+      CommandHandler
+      Commit
+      Index
+      Utils
+      TestUtils
+      AddTests
+      CommitTests
+      UtilTests
+      InitTests
+      ParserTests
+      BranchTests
+      LogTests
+      Status
+      StatusTests
+      SwitchTests
       -- if you add modules to your project, list them here
       -- so that they will be available to the executable and test suite
   hs-source-dirs:
       src
 
-executable hgit-exe
+executable hgit
   import:
       common-stanza
   main-is: 
