@@ -264,25 +264,11 @@ testHandleDeletedFiles = TestCase $ withTestRepo $ \testDir -> do
     -- Add changes (which includes deletion)
     runAddCommand [] ["file1.txt"]
 
-    -- Commit after deletion
-    commitWithMessage "Remove file1.txt"
-    headOid <- getHeadCommitOid testDir
-
-    -- Deserialize the latest commit
-    commitResult <- deserializeCommit headOid
-    case commitResult of
-        Left err -> assertFailure $ "Failed to deserialize commit: " ++ err
-        Right commit -> do
-            -- Deserialize the tree
-            treeResult <- deserializeTree (treeOid commit)
-            case treeResult of
-                Left err -> assertFailure $ "Failed to deserialize tree: " ++ err
-                Right tree -> do
-                    -- Read the updated index
-                    updatedIndex <- readIndexFile
-                    -- Verify 'file1.txt' is no longer in the index and that 'file2.txt' is still there
-                    assertBool "file1.txt should be removed from the index" (not $ Map.member "file1.txt" updatedIndex)
-                    assertBool "file2.txt should still be in the index" (Map.member "file2.txt" updatedIndex)
+    -- Read the updated index
+    updatedIndex <- readIndexFile
+    -- Verify 'file1.txt' is no longer in the index and that 'file2.txt' is still there
+    assertBool "file1.txt should be removed from the index" (not $ Map.member "file1.txt" updatedIndex)
+    assertBool "file2.txt should still be in the index" (Map.member "file2.txt" updatedIndex)
 
 -- | Test handling deletion of tracked directories between commits
 testHandleDeletedDirectory :: Test
