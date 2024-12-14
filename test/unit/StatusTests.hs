@@ -93,8 +93,8 @@ testStatusExtendedScenario = TestCase $ withTestRepo $ \testDir -> do
   case result5 of
     Left (CommandError err) -> assertFailure $ "status failed unexpectedly: " ++ err
     Right output -> do
-        putStrLn "DEBUG: Status output after commit:"
-        putStrLn output  -- Print the entire output for debugging
+        -- putStrLn "DEBUG: Status output after commit:"
+        -- putStrLn output  -- Print the entire output for debugging
 
         -- Existing assertions
         assertBool "No changes to be committed after commit" (not ("Changes to be committed" `isInfixOf` output))
