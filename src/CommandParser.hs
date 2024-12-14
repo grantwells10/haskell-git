@@ -44,11 +44,6 @@ newtype CommandError = CommandError String
 
 instance Exception CommandError
 
--- | Default validation function
-defaultValidate :: [(String, Maybe String)] -> [String] -> Either CommandError ()
-defaultValidate [] [] = Right ()
-defaultValidate _ _ = Left $ CommandError "This command does not accept any flags or arguments."
-
 -- | Parse the input to find the command, flags, and arguments
 parseInput :: [Command] -> [String] -> Either CommandError ParsedCommand
 parseInput commands input = do

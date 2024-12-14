@@ -13,7 +13,7 @@ module TestUtils
   )
 where
 
-import CommandHandler (commandHandler, commands)
+import CommandHandler (commandHandler, commands, defaultValidate)
 import CommandParser
   ( Command (Command, flags, subcommand),
     CommandError (..),
@@ -25,7 +25,6 @@ import CommandParser
         parsedFlags,
         parsedSubcommand
       ),
-    defaultValidate,
     parseCommand,
     parseFlagsAndArgs,
     parseInput,

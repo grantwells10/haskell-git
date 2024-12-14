@@ -1,6 +1,6 @@
-module CommandHandler (commandHandler, commands) where
+module CommandHandler (commandHandler, commands, defaultValidate) where
 
-import CommandParser (Command (..), CommandError (..), Flag (..), FlagType (..), ParsedCommand (..), defaultValidate)
+import CommandParser (Command (..), CommandError (..), Flag (..), FlagType (..), ParsedCommand (..))
 import Commit (buildTree, createCommitContent, getCurrentCommitOid, updateHEAD, Commit, parentOid, traverseCommits, checkoutCommit, anyModifiedFile, uncommittedChangesExist)
 import Control.Exception (SomeException, throwIO, try)
 import Control.Monad (unless, when)
@@ -135,6 +135,11 @@ handleInit = do
       let headContent = "refs/heads/main"
       headPath <- getHEADFilePath
       writeFileFromByteString headPath $ stringToByteString headContent
+
+-- | Default validation function
+defaultValidate :: [(String, Maybe String)] -> [String] -> Either CommandError ()
+defaultValidate [] [] = Right ()
+defaultValidate _ _ = Left $ CommandError "This command does not accept any flags or arguments."
 
 validateAddCommand :: [(String, Maybe String)] -> [String] -> Either CommandError ()
 validateAddCommand flags args =
