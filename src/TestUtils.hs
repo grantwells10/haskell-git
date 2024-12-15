@@ -2,7 +2,6 @@
 
 module TestUtils
   ( testValidate,
-    letCommands,
     createFiles,
     runCommand,
     runAddCommand,
@@ -13,22 +12,9 @@ module TestUtils
   )
 where
 
-import CommandHandler (commandHandler, commands, defaultValidate)
-import CommandParser
-  ( Command (Command, flags, subcommand),
-    CommandError (..),
-    Flag (..),
-    FlagType (..),
-    ParsedCommand
-      ( ParsedCommand,
-        parsedArguments,
-        parsedFlags,
-        parsedSubcommand
-      ),
-    parseCommand,
-    parseFlagsAndArgs,
-    parseInput,
-  )
+import CommandHandler (commandHandler)
+import Command (Command (..), CommandError (..), Flag (..))
+import CommandParser (ParsedCommand (..))
 import Commit
   ( Commit (..),
     Tree (..),
@@ -94,9 +80,6 @@ import Utils ( doesDirectoryExist, readFileAsByteString, sha1Hash )
 testValidate :: [(String, Maybe String)] -> [String] -> Either CommandError ()
 testValidate _ _ = Right ()
 
-letCommands :: [Command]
-letCommands = commands
-
 -- | Helper function to create multiple files with specified content
 createFiles :: [(FilePath, String)] -> IO ()
 createFiles = mapM_ (\(f, content) -> createDirectoryIfMissing True (takeDirectory f) >> writeFile f content)
@@ -106,7 +89,7 @@ runCommand :: Command -> [(String, Maybe String)] -> [String] -> IO (Either Comm
 runCommand cmd flags args = do
   let parsedCmd =
         ParsedCommand
-          { parsedSubcommand = cmd,
+          { cmd = cmd,
             parsedFlags = flags,
             parsedArguments = args
           }
@@ -115,8 +98,9 @@ runCommand cmd flags args = do
 -- | Runs the 'git add' command with given flags and arguments
 runAddCommand :: [(String, Maybe String)] -> [String] -> IO ()
 runAddCommand flags args = do
-  let addCmd = letCommands !! 1 -- "add" command
-  resultAdd <- runCommand addCmd flags args
+  -- OLD IMPLEMENTATION
+  -- let addCmd = letCommands !! 1 -- "add" command
+  resultAdd <- runCommand Command.Add flags args
   case resultAdd of
     Left (CommandError err) -> assertFailure $ "Add command failed: " ++ err
     Right _ -> return ()
@@ -124,8 +108,7 @@ runAddCommand flags args = do
 -- | Runs the 'git commit' command with given flags and arguments
 runCommitCommand :: [(String, Maybe String)] -> [String] -> IO ()
 runCommitCommand flags args = do
-  let commitCmd = letCommands !! 2 -- "commit" command
-  resultCommit <- runCommand commitCmd flags args
+  resultCommit <- runCommand Command.Commit flags args
   case resultCommit of
     Left (CommandError err) -> assertFailure $ "Commit command failed: " ++ err
     Right _ -> return ()
@@ -170,8 +153,7 @@ withTestRepo action = do
   setCurrentDirectory testDir
 
   -- Initialize repository
-  let initCmd = head letCommands -- "init" command
-  resultInit <- runCommand initCmd [] []
+  resultInit <- runCommand Init [] []
   case resultInit of
     Left (CommandError err) -> do
       setCurrentDirectory originalDir

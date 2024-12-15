@@ -5,10 +5,8 @@ module AddTests
   )
 where
 
-import CommandParser
-    ( CommandError(CommandError),
-      ParsedCommand(ParsedCommand, parsedArguments, parsedSubcommand,
-                    parsedFlags) )
+import CommandParser (ParsedCommand(..))
+import Command (CommandError(..), Command(..))
 import Commit (buildTree)
 import Control.Monad (forM_, when)
 import Data.ByteString.Char8 qualified as BS8
@@ -27,8 +25,7 @@ import Test.HUnit
   )
 import Utils ( sha1Hash )
 import TestUtils
-    ( letCommands,
-      createFiles,
+    ( createFiles,
       runCommand,
       runAddCommand,
       verifyIndex,
@@ -196,26 +193,12 @@ testAddInvalidCombinations = TestCase $ withTestRepo $ \testDir -> do
   createFiles [("file1.txt", "Hello World")]
 
   -- Attempt to combine 'git add -u' with 'git add .'
-  let addCmd = letCommands !! 1 -- "add" command
-  let parsedAddCmd =
-        ParsedCommand
-          { parsedSubcommand = addCmd,
-            parsedFlags = [("update", Nothing)],
-            parsedArguments = ["."]
-          }
-  resultAdd <- runCommand addCmd [("update", Nothing)] ["."]
+  resultAdd <- runCommand Command.Add [("update", Nothing)] ["."]
   case resultAdd of
     Left (CommandError _) -> return () -- Expected to fail
     Right _ -> assertFailure "Combining 'add -u' with '.' should fail"
 
-  -- Attempt to combine 'git add -u' with specific files
-  let parsedAddCmd2 =
-        ParsedCommand
-          { parsedSubcommand = addCmd,
-            parsedFlags = [("update", Nothing)],
-            parsedArguments = ["file1.txt"]
-          }
-  resultAdd2 <- runCommand addCmd [("update", Nothing)] ["file1.txt"]
+  resultAdd2 <- runCommand Command.Add [("update", Nothing)] ["file1.txt"]
   case resultAdd2 of
     Left (CommandError _) -> return () -- Expected to fail
     Right _ -> assertFailure "Combining 'add -u' with specific files should fail"

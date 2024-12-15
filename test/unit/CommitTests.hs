@@ -6,12 +6,7 @@ module CommitTests
 where
 
 import CommandHandler ()
-import CommandParser
-  ( Command (..),
-    CommandError (..),
-    ParsedCommand (..),
-    defaultValidate,
-  )
+import Command ( Command (..), CommandError (..) )
 import Commit
   ( Commit (..),
     Tree (..),
@@ -28,8 +23,7 @@ import System.FilePath (splitDirectories, takeDirectory, takeFileName, (</>))
 import Test.HUnit
     ( assertBool, assertEqual, assertFailure, Test(..) )
 import TestUtils
-    ( letCommands,
-      createFiles,
+    ( createFiles,
       runCommand,
       runAddCommand,
       runCommitCommand,
@@ -40,8 +34,7 @@ import System.Directory (removeFile, removeDirectoryRecursive)
 -- | Asserts that a commit command fails with a CommandError
 assertCommitFailure :: [(String, Maybe String)] -> [String] -> IO ()
 assertCommitFailure flags args = do
-  let commitCmd = letCommands !! 2 -- "commit" command
-  result <- runCommand commitCmd flags args
+  result <- runCommand Command.Commit flags args
   case result of
     Left _ -> return () -- Expected to fail
     Right _ -> assertFailure "Expected commit to fail, but it succeeded."

@@ -7,14 +7,13 @@ where
 
 import Test.HUnit ( assertBool, assertFailure, Test(..) )
 import TestUtils
-    ( letCommands,
-      withTestRepo,
+    ( withTestRepo,
       createFiles,
       runCommand,
       runAddCommand,
       runCommitCommand
     )
-import CommandParser (CommandError(..), Command (subcommand))
+import Command (CommandError(..), Command ( .. ))
 import System.Directory (removeFile)
 import System.FilePath ((</>))
 import Data.List (isInfixOf)
@@ -27,10 +26,10 @@ statusTests = TestLabel "Status Command Tests" $ TestList
 
 testStatusExtendedScenario :: Test
 testStatusExtendedScenario = TestCase $ withTestRepo $ \testDir -> do
-  let statusCmd = head $ filter (\c -> subcommand c == "status") letCommands
+  -- let statusCmd = head $ filter (\c -> subcommand c == "status") letCommands
 
   -- Step 1: Immediately after init, we should be on branch main with no changes
-  result1 <- runCommand statusCmd [] []
+  result1 <- runCommand Status [] []
   case result1 of
     Left (CommandError err) -> assertFailure $ "status failed unexpectedly: " ++ err
     Right output -> do
@@ -48,7 +47,7 @@ testStatusExtendedScenario = TestCase $ withTestRepo $ \testDir -> do
   createFiles initialFiles
 
   -- Check status: all should be untracked now
-  result2 <- runCommand statusCmd [] []
+  result2 <- runCommand Command.Status [] []
   case result2 of
     Left (CommandError err) -> assertFailure $ "status failed unexpectedly: " ++ err
     Right output -> do
@@ -57,7 +56,7 @@ testStatusExtendedScenario = TestCase $ withTestRepo $ \testDir -> do
 
   -- Step 3: Stage some files (file1.txt and all under dir/)
   runAddCommand [] ["file1.txt", "dir"]
-  result3 <- runCommand statusCmd [] []
+  result3 <- runCommand Command.Status [] []
   case result3 of
     Left (CommandError err) -> assertFailure $ "status failed unexpectedly: " ++ err
     Right output -> do
@@ -71,7 +70,7 @@ testStatusExtendedScenario = TestCase $ withTestRepo $ \testDir -> do
   createFiles [("file1.txt", "Hello World Modified")]
   createFiles [("dir/subfile1.txt", "Subdirectory file 1 modified")]
 
-  result4 <- runCommand statusCmd [] []
+  result4 <- runCommand Command.Status [] []
   case result4 of
     Left (CommandError err) -> assertFailure $ "status failed unexpectedly: " ++ err
     Right output -> do
@@ -89,7 +88,7 @@ testStatusExtendedScenario = TestCase $ withTestRepo $ \testDir -> do
   -- After running runCommitCommand [("message", Just "Initial commit")] []
 -- Check status again
 -- After runCommitCommand [("message", Just "Initial commit")] []
-  result5 <- runCommand statusCmd [] []
+  result5 <- runCommand Command.Status [] []
   case result5 of
     Left (CommandError err) -> assertFailure $ "status failed unexpectedly: " ++ err
     Right output -> do
@@ -105,7 +104,7 @@ testStatusExtendedScenario = TestCase $ withTestRepo $ \testDir -> do
   removeFile "file1.txt"
   removeFile "dir/subfile2.txt" -- remove a file in the subdir
 
-  result6 <- runCommand statusCmd [] []
+  result6 <- runCommand Command.Status [] []
   case result6 of
     Left (CommandError err) -> assertFailure $ "status failed unexpectedly: " ++ err
     Right output -> do
@@ -116,7 +115,7 @@ testStatusExtendedScenario = TestCase $ withTestRepo $ \testDir -> do
   -- Step 7: Stage the deletions
   runAddCommand [] ["file1.txt", "dir/subfile2.txt"]
 
-  result7 <- runCommand statusCmd [] []
+  result7 <- runCommand Command.Status [] []
   case result7 of
     Left (CommandError err) -> assertFailure $ "status failed unexpectedly: " ++ err
     Right output -> do
@@ -125,7 +124,7 @@ testStatusExtendedScenario = TestCase $ withTestRepo $ \testDir -> do
       assertBool "dir/subfile2.txt deleted staged" ("deleted:   dir/subfile2.txt" `isInfixOf` output)
 
   -- Also check branch name again
-  result8 <- runCommand statusCmd [] []
+  result8 <- runCommand Command.Status [] []
   case result8 of
     Left (CommandError err) -> assertFailure $ "status failed unexpectedly: " ++ err
     Right output -> do

@@ -5,9 +5,9 @@ module LogTests
   )
 where
 
-import CommandHandler (commandHandler, commands)
-import CommandParser
-  ( Command(..), CommandError(..), ParsedCommand(..) )
+import CommandHandler (commandHandler)
+import CommandParser (ParsedCommand(..) )
+import Command ( Command (..), CommandError (..) )
 import Control.Monad (forM_, when)
 import Data.List (isPrefixOf, find)
 import Data.Map.Strict qualified as Map
@@ -72,24 +72,12 @@ extractCommitMessage section =
       cleanMessages = map (dropWhile (== ' ')) msg
   in trimSpaces $ unwords cleanMessages
 
--- | Retrieve the 'log' command from the list of available commands
-getLogCommand :: [Command] -> Either CommandError Command
-getLogCommand cmds =
-  case find (\cmd -> subcommand cmd == "log") cmds of
-    Just cmd -> Right cmd
-    Nothing -> Left $ CommandError "Log command not found."
-
 -- | Test that 'hgit log' outputs "No commits found." when there are no commits
 testLogNoCommits :: Test
 testLogNoCommits = TestCase $ withTestRepo $ \_testDir -> do
-  -- Retrieve the 'log' command
-  logCommand <- case getLogCommand commands of
-                  Left err -> assertFailure (show err)
-                  Right cmd -> return cmd
-
   -- Construct the ParsedCommand
   let parsedLogCmd = ParsedCommand
-                      { parsedSubcommand = logCommand
+                      { cmd = Command.Log
                       , parsedFlags = []
                       , parsedArguments = []
                       }
@@ -106,11 +94,6 @@ testLogNoCommits = TestCase $ withTestRepo $ \_testDir -> do
 -- | Test that 'hgit log' correctly displays one commit
 testLogSingleCommit :: Test
 testLogSingleCommit = TestCase $ withTestRepo $ \_testDir -> do
-  -- Retrieve the 'log' command
-  logCommand <- case getLogCommand commands of
-                  Left err -> assertFailure (show err)
-                  Right cmd -> return cmd
-
   -- Create and commit a single file
   let initialFiles =
         [ ("file1.txt", "Hello World")
@@ -121,7 +104,7 @@ testLogSingleCommit = TestCase $ withTestRepo $ \_testDir -> do
 
   -- Construct the ParsedCommand
   let parsedLogCmd = ParsedCommand
-                      { parsedSubcommand = logCommand
+                      { cmd = Command.Log
                       , parsedFlags = []
                       , parsedArguments = []
                       }
@@ -139,11 +122,6 @@ testLogSingleCommit = TestCase $ withTestRepo $ \_testDir -> do
 -- | Test that 'hgit log' correctly displays multiple commits
 testLogMultipleCommits :: Test
 testLogMultipleCommits = TestCase $ withTestRepo $ \_testDir -> do
-  -- Retrieve the 'log' command
-  logCommand <- case getLogCommand commands of
-                  Left err -> assertFailure (show err)
-                  Right cmd -> return cmd
-
   -- Create and commit first file
   let files1 =
         [ ("file1.txt", "Hello World"),
@@ -171,7 +149,7 @@ testLogMultipleCommits = TestCase $ withTestRepo $ \_testDir -> do
 
   -- Construct the ParsedCommand
   let parsedLogCmd = ParsedCommand
-                      { parsedSubcommand = logCommand
+                      { cmd = Command.Log
                       , parsedFlags = []
                       , parsedArguments = []
                       }
@@ -189,11 +167,6 @@ testLogMultipleCommits = TestCase $ withTestRepo $ \_testDir -> do
 -- | Test that the commits in the log match the expected messages
 testLogCommitMessages :: Test
 testLogCommitMessages = TestCase $ withTestRepo $ \_testDir -> do
-  -- Retrieve the 'log' command
-  logCommand <- case getLogCommand commands of
-                  Left err -> assertFailure (show err)
-                  Right cmd -> return cmd
-
   -- Create and commit first file
   let files1 =
         [ ("file1.txt", "Hello World"),
@@ -213,7 +186,7 @@ testLogCommitMessages = TestCase $ withTestRepo $ \_testDir -> do
 
   -- Construct the ParsedCommand
   let parsedLogCmd = ParsedCommand
-                      { parsedSubcommand = logCommand
+                      { cmd = Command.Log
                       , parsedFlags = []
                       , parsedArguments = []
                       }

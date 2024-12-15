@@ -36,7 +36,7 @@ import System.FilePath
     (</>)
   )
 import Data.List (isPrefixOf, (\\))
-import CommandParser ( CommandError(..) )
+import Command ( CommandError(..) )
 import Utils
     ( doesDirectoryExist,
       createObject,
@@ -86,7 +86,7 @@ updateIndex indexMap filepaths flags =
       allFiles <- getAllFiles
       updateFiles indexMap allFiles
     ([], _) -> updateFiles indexMap filepaths
-    _ -> return $ Left $ CommandError "Invalid usage of 'hgit add'"
+    _ -> return $ Left $ CommandError "Invalid usage of 'hgit add'. Use 'hgit add -u', 'hgit add <file>... ', or 'hgit add .'"
 
 -- | Updates only the tracked files
 updateTrackedFiles :: IndexMap -> IO (Either CommandError IndexMap)

@@ -3,7 +3,7 @@
 {-# HLINT ignore "Use newtype instead of data" #-}
 module Commit where
 
-import CommandParser (CommandError (..))
+import Command (CommandError (..))
 import Control.Monad (forM_, unless, when, forM)
 import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as BS8

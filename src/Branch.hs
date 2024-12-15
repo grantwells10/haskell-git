@@ -7,7 +7,7 @@ module Branch
   )
 where
 
-import CommandParser (CommandError (..))
+import Command (CommandError (..))
 import Control.Exception (throwIO)
 import Control.Monad (unless, when)
 import System.Directory

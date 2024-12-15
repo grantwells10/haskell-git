@@ -3,7 +3,7 @@ import CommitTests (commitTests)
 import InitTests (initTests)
 import UtilTests (utilTests)
 import LogTests(logTests)
-import ParserTests (parserTests, prop_parseInput_correct)
+import ParserTests (parserTests, prop_parseInputRawCommand)
 import Test.HUnit ( runTestTT, Test(TestList) )
 import Test.QuickCheck
     ( quickCheckWith, stdArgs, Testable, Args(maxSuccess) )
@@ -29,7 +29,7 @@ main = do
         ]
 
   -- Run QuickCheck Properties
-  quickCheckN 1000 prop_parseInput_correct
+  quickCheckN 1000 prop_parseInputRawCommand
 
 -- | Helper function to run QuickCheck with a specified number of tests
 quickCheckN :: (Test.QuickCheck.Testable prop) => Int -> prop -> IO ()

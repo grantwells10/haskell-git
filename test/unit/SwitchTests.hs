@@ -11,8 +11,7 @@ import TestUtils
     runCommand,
     runAddCommand,
     runCommitCommand,
-    verifyIndex,
-    letCommands
+    verifyIndex
   )
 import System.Directory
   ( doesFileExist,
@@ -21,15 +20,14 @@ import System.Directory
 import System.FilePath ((</>))
 import Control.Monad (when)
 import Index (readIndexFile, getAllFiles)
-import CommandParser (Command (..), CommandError(..))
+import Command (Command (..), CommandError(..))
 import Data.Map.Strict qualified as Map
 import Data.List (sort, isInfixOf)
 import Utils (getHgitPath, stringToByteString, writeFileFromByteString, readFileAsByteString)
 
 runSwitchCommand :: [String] -> IO (Either CommandError String)
 runSwitchCommand args = do
-  let switchCmd = letCommands !! 4
-  runCommand switchCmd [] args
+  runCommand Switch [] args
 
 
 testSwitchNonExistentBranch :: Test
@@ -90,8 +88,7 @@ testSwitchDifferentBranch = TestCase $ withTestRepo $ \testDir -> do
   mainIndex <- readIndexFile
   mainFiles <- getAllFiles
 
-  let branchCmd = letCommands !! 3
-  resBranch <- runCommand branchCmd [] ["feature"]
+  resBranch <- runCommand Branch [] ["feature"]
   case resBranch of
     Left (CommandError err) -> assertFailure $ "Branch creation failed: " ++ err
     Right _ -> return ()

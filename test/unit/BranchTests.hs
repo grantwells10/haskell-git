@@ -6,12 +6,8 @@ module BranchTests
 where
 
 import CommandHandler ()
-import CommandParser
-  ( Command (..),
-    CommandError (..),
-    ParsedCommand (..),
-    defaultValidate,
-  )
+import CommandParser ( ParsedCommand (..) )
+import Command ( Command (..), CommandError (..) )
 import Control.Exception (SomeException, try)
 import Control.Monad (forM_, when)
 import Data.ByteString.Char8 qualified as BS8
@@ -23,8 +19,7 @@ import System.Directory (listDirectory, removeDirectoryRecursive, removeFile)
 import System.FilePath (takeFileName, (</>))
 import Test.HUnit ( assertEqual, assertFailure, Test(..) )
 import TestUtils
-    ( letCommands,
-      createFiles,
+    ( createFiles,
       runCommand,
       runAddCommand,
       runCommitCommand,
@@ -34,8 +29,7 @@ import Utils ( readFileAsByteString )
 -- | Asserts that a branch command fails with a CommandError
 assertBranchFailure :: [(String, Maybe String)] -> [String] -> IO ()
 assertBranchFailure flags args = do
-  let branchCmd = letCommands !! 3 -- "branch" command (assuming index 3)
-  result <- runCommand branchCmd flags args
+  result <- runCommand Branch flags args
   case result of
     Left _ -> return () -- Expected to fail
     Right _ -> assertFailure "Expected branch command to fail, but it succeeded."
@@ -106,8 +100,7 @@ testBranchCreateValid = TestCase $ withTestRepo $ \testDir -> do
 -- | Helper function to create a branch
 runBranchCreateCommand :: String -> IO ()
 runBranchCreateCommand branchName = do
-  let branchCmd = letCommands !! 3 -- "branch" command
-  result <- runCommand branchCmd [] [branchName]
+  result <- runCommand Branch [] [branchName]
   case result of
     Left (CommandError err) -> assertFailure $ "Branch creation failed: " ++ err
     Right _ -> return ()
@@ -137,8 +130,7 @@ testBranchDeleteValid = TestCase $ withTestRepo $ \testDir -> do
 -- | Helper function to delete a branch
 runBranchDeleteCommand :: String -> IO ()
 runBranchDeleteCommand branchName = do
-  let branchCmd = letCommands !! 3 -- "branch" command
-  result <- runCommand branchCmd [("delete", Just branchName)] []
+  result <- runCommand Branch [("delete", Just branchName)] []
   case result of
     Left (CommandError err) -> assertFailure $ "Branch deletion failed: " ++ err
     Right _ -> return ()
@@ -157,8 +149,7 @@ testBranchDeleteCurrent = TestCase $ withTestRepo $ \testDir -> do
 
   -- Attempt to delete the current branch "main"
   -- Expect failure
-  let branchCmd = letCommands !! 3 -- "branch" command
-  result <- runCommand branchCmd [("delete", Just "main")] []
+  result <- runCommand Branch [("delete", Just "main")] []
   case result of
     Left (CommandError _) -> return () -- Expected to fail
     Right _ -> assertFailure "Expected deletion of current branch to fail, but it succeeded."

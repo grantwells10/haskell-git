@@ -5,7 +5,8 @@ module InitTests
   )
 where
 
-import CommandParser (Command (..), CommandError (..), ParsedCommand (..), defaultValidate)
+import CommandParser (ParsedCommand (..))
+import Command (Command (..), CommandError (..))
 import Commit (deserializeCommit, deserializeTree, getCurrentCommitOid)
 import Control.Monad (when)
 import Data.ByteString.Char8 qualified as BS8
@@ -35,7 +36,7 @@ testGitInit = TestCase $ do
   setCurrentDirectory testDir
   let initCommand =
         ParsedCommand
-          { parsedSubcommand = Command "init" "" [] defaultValidate,
+          { cmd = Command.Init,
             parsedFlags = [],
             parsedArguments = []
           }
