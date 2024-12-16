@@ -163,6 +163,51 @@ testSwitchWithUncommitedChanges = TestCase $ withTestRepo $ \testDir -> do
   assertBool "Working directory should remain unchanged after failed switch"
     (sort (newBranchFilesBeforeAdd ++ ["file3.txt"]) == sort currFiles)
 
+
+testSwitchWithCommitedChanges :: Test
+testSwitchWithCommitedChanges = TestCase $ withTestRepo $ \testDir -> do
+  -- Main branch
+  let filesMain = [("file1.txt", "Hello"), ("file2.txt", "World")]
+  createFiles filesMain
+  runCommand Command.Add [] ["file1.txt", "file2.txt"]
+  runCommand Command.Commit [("message", Just "Init commit on main")] []
+
+  mainIndex <- readIndexFile
+  mainFiles <- getAllFiles
+
+  -- New branch 
+  _ <- runCommand Command.Branch [] ["newBranch"]
+  switchTonewBranch <- runCommand Command.Switch [] ["newBranch"]
+  case switchTonewBranch of
+    Left (CommandError err) -> assertFailure $ "Switching to newBranch should succeed: " ++ err
+    Right _ -> return ()
+
+  newBranchIndexBeforeAdd <- readIndexFile
+  newBranchFilesBeforeAdd <- getAllFiles
+
+  -- Add on newBranch but don't commit
+  let filesNewBranch = [("file3.txt", "Lebron James")]
+  createFiles filesNewBranch
+  runCommand Command.Add [] ["file3.txt"]
+  runCommand Command.Commit [("message", Just "Commit on newBranch")] []
+
+  newBranchIndexAfterAdd <- readIndexFile
+  assertBool "Index should change after adding file" (newBranchIndexBeforeAdd /= newBranchIndexAfterAdd)
+
+  -- Switch back to main
+  switchToMain <- runCommand Command.Switch [] ["main"]
+  case switchToMain of
+    Left (CommandError err) -> assertFailure $ "Switching to main should succeed: " ++ err
+    Right _ -> return ()
+
+  currIndex <- readIndexFile
+  currFiles <- getAllFiles
+
+  assertEqual "Index should match original main state after switching back" mainIndex currIndex
+  assertEqual "Working directory should match original main state after switching back"
+    (sort mainFiles) (sort currFiles)
+
+
 switchTests :: Test
 switchTests = 
   TestLabel "Switch Command Tests" $
@@ -170,5 +215,6 @@ switchTests =
       [ TestLabel "Switch Non-Existent Branch" testSwitchNonExistentBranch,
         TestLabel "Switch Same Branch" testSwitchSameBranch,
         TestLabel "Switch Different Branch and Back" testSwitchDifferentBranch,
-        TestLabel "Switch with Uncommitted Changes" testSwitchWithUncommitedChanges
+        TestLabel "Switch with Uncommitted Changes" testSwitchWithUncommitedChanges,
+        TestLabel "Switch with Committed Changes" testSwitchWithCommitedChanges
       ]
