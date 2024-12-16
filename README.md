@@ -30,7 +30,7 @@ __All of our implemented commands will rely on this object model, and they will 
       - hgit add . : add all files in current directory and in subdirectories including hidden files and directories starting with a . (except for .hgit of course)
   - hgit commit: Create a new commit containing the current contents of the index and the given log message describing the changes. This means that a new commit object will be created and its parent will be the current commit object pointed to by HEAD, and its root tree will be created containing all the blobs or trees for the root dir of the project. This will involve DFS with and from the lowest level dir up we compare OIDs with what's in the objects directory, if it already exists, just point to it, otherwise create it. Keep in mind that this step will not be adding any new blob files so it will only be adding new tree objects (if any) and a commit object.
     - Versions to support:
-      - hgit commit -m "commit msg" 
+      - hgit commit -m="commit msg" 
   - hgit branch: List, create, or delete branches
     - Versions to support:
       - hgit branch : list all branches with an asterisk to denote the current branch (Head pointer will contain this info)
