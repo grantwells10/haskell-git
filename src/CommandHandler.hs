@@ -40,6 +40,7 @@ import Status
       computeUntrackedFiles,
       formatStatusOutput )
 
+-- | Main entry point for handling commands
 commandHandler :: ParsedCommand -> IO (Either CommandError String)
 commandHandler parsedCmd = do
   let command = cmd parsedCmd
@@ -61,6 +62,7 @@ commandHandler parsedCmd = do
     Left (ex :: SomeException) -> return $ Left (CommandError $ show ex)
     Right output -> return $ Right output
 
+-- | Handles the init command
 handleInit :: IO String
 handleInit = do
   hgitPath <- getHgitPath
@@ -91,6 +93,7 @@ handleAdd flags args = do
       writeIndexFile updatedIndexMap
       return ""
 
+-- | Handles the commit command
 handleCommit :: [(String, Maybe String)] -> [String] -> IO String
 handleCommit flags _args = do
   let Just (Just commitMsg) = lookup "message" flags
@@ -123,6 +126,7 @@ handleBranch flags args = do
         _ -> throwIO $ userError "Invalid usage of 'hgit branch'."
     _ -> throwIO $ userError "Invalid usage of 'hgit branch'."
 
+-- | Handles the log command
 handleLogCommand :: IO String
 handleLogCommand = do
   hgitPath <- getHgitPath
@@ -133,6 +137,7 @@ handleLogCommand = do
     Nothing -> return "No commits found."
     Just oid -> traverseCommits oid []
 
+-- | Handles the switch command
 handleSwitchCommand :: [String] -> IO String
 handleSwitchCommand [branchName] = do
   headsPath <- getHeadsPath
@@ -156,6 +161,7 @@ handleSwitchCommand [branchName] = do
   return $ "Switched to branch '" ++ branchName ++ "'"
 handleSwitchCommand _ = error "Invalid usage. This should never happen due to validateSwitchCommand."
 
+-- | Handles the status command
 handleStatus :: IO String
 handleStatus = do
   branchName <- getCurrentBranchName

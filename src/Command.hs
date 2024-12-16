@@ -128,7 +128,7 @@ allFlags = concatMap flags [Init, Commit, Add, Status, Log, Switch, Branch]
 
 {-
 
-FORMER COMMAND STRUCTURE (Q2)
+FORMER COMMAND STRUCTURE (Q2 OF FINAL PROJECT)
 
 Command
   { subcommand :: String,
