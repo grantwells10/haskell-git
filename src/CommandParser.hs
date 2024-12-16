@@ -1,120 +1,150 @@
-module CommandParser where
+-- | CommandParser.hs
+-- | This file contains the implementation of the command parser
+-- | It parses the input command and flags, and validates them
+-- | It also defines the data type for the parsed command
+-- | Supports RawCommand to ParsedCommand conversion
+
+module CommandParser (
+  parseInput,
+  RawCommand (..),
+  ParsedCommand (..),
+  parseRawCommand,
+  handleRawCommand,
+  parseFlagsAndArgs,
+  rawCommandToTokens
+) where
 
 import Control.Exception ( Exception )
 import Data.Char (isSpace)
-import Data.List (find, isPrefixOf)
+import Data.List (find, isPrefixOf, isSuffixOf)
 import Data.Maybe (maybeToList)
 import Data.Set qualified as Set
+import Command (Command(..), Flag(..), CommandError(..), flags, validate, allFlags)
 
-data Command = Command
-  { subcommand :: String,
-    description :: String,
-    flags :: [Flag],
-    validate :: [(String, Maybe String)] -> [String] -> Either CommandError ()
+-- | Raw parsed command, flexible for testing
+data RawCommand = RawCommand
+  { rawName :: String,
+    rawFlags :: [(String, Maybe String)],
+    rawArguments :: [String]
   }
+  deriving (Show, Eq)
 
-instance Eq Command where
-  (==) :: Command -> Command -> Bool
-  (Command sc1 desc1 flags1 _) == (Command sc2 desc2 flags2 _) =
-    sc1 == sc2 && desc1 == desc2 && flags1 == flags2
-
-instance Show Command where
-  show (Command sc desc flags _) =
-    "Command { subcommand = " ++ show sc ++ ", description = " ++ show desc ++ ", flags = " ++ show flags ++ " }"
-
-data FlagType = NoArg | RequiresArg
-  deriving (Show, Eq, Ord)
-
-data Flag = Flag
-  { longName :: String,
-    shortName :: Maybe String,
-    flagType :: FlagType
-  }
-  deriving (Show, Eq, Ord)
-
+-- | Rigorous parsed command corresponding to a valid HGit command
 data ParsedCommand = ParsedCommand
-  { parsedSubcommand :: Command,
+  { cmd :: Command,
     parsedFlags :: [(String, Maybe String)],
     parsedArguments :: [String]
   }
   deriving (Show, Eq)
 
-newtype CommandError = CommandError String
-  deriving (Show, Eq)
-
-instance Exception CommandError
-
--- | Default validation function
-defaultValidate :: [(String, Maybe String)] -> [String] -> Either CommandError ()
-defaultValidate [] [] = Right ()
-defaultValidate _ _ = Left $ CommandError "This command does not accept any flags or arguments."
-
 -- | Parse the input to find the command, flags, and arguments
-parseInput :: [Command] -> [String] -> Either CommandError ParsedCommand
-parseInput commands input = do
-  (cmd, remaining) <- parseCommand commands input
-  (parsedFlags, args) <- parseFlagsAndArgs (flags cmd) remaining
-  -- Call the validation function
-  validate cmd parsedFlags args
-  return $ ParsedCommand cmd parsedFlags args
+parseInput :: [String] -> Either CommandError ParsedCommand
+parseInput input = do
+  rawCmd <- parseRawCommand input
+  handleRawCommand rawCmd
 
--- | Parse the command from the list of commands
-parseCommand :: [Command] -> [String] -> Either CommandError (Command, [String])
-parseCommand _ [] = Left $ CommandError "No command provided."
-parseCommand commands (cmd : rest) =
-  case find (\accCommand -> subcommand accCommand == cmd) commands of
-    Just command -> Right (command, rest)
-    Nothing -> Left $ CommandError $ "Unknown command: " ++ cmd
+-- | Parse the raw command from input
+parseRawCommand :: [String] -> Either CommandError RawCommand
+parseRawCommand [] = Left $ CommandError "No command provided."
+parseRawCommand (cmd : rest) = do
+  (parsedFlags, remaining) <- parseFlagsAndArgs rest
+  return $ RawCommand cmd parsedFlags remaining
 
-parseFlagsAndArgs :: [Flag] -> [String] -> Either CommandError ([(String, Maybe String)], [String])
-parseFlagsAndArgs availableFlags tokens = parseTokens availableFlags tokens [] [] [] False
+-- | Validate that raw command is valid, convert to a ParsedCommand
+handleRawCommand :: RawCommand -> Either CommandError ParsedCommand
+handleRawCommand rawCmd = do
+  -- First, validate command name
+  cmd <- case rawName rawCmd of
+    "init" -> Right Init
+    "commit" -> Right Commit
+    "add" -> Right Add
+    "status" -> Right Status
+    "log" -> Right Log
+    "switch" -> Right Switch
+    "branch" -> Right Branch
+    _ -> Left $ CommandError $ "Unknown command: " ++ rawName rawCmd
+  -- Then, validate flag and 
+  validate cmd (rawFlags rawCmd) (rawArguments rawCmd)
+  -- If all is well, return the parsed command
+  return $ ParsedCommand cmd (rawFlags rawCmd) (rawArguments rawCmd)
 
-parseTokens :: [Flag] -> [String] -> [(String, Maybe String)] -> [String] -> [String] -> Bool -> Either CommandError ([(String, Maybe String)], [String])
-parseTokens _ [] parsedFlags args _ _ = Right (reverse parsedFlags, reverse args)
-parseTokens availableFlags (x : xs) parsedFlags args usedFlags seenArg
-  | not seenArg && isFlag x = handleFlag availableFlags x xs parsedFlags args usedFlags
-  | otherwise = parseTokens availableFlags xs parsedFlags (x : args) usedFlags True
+-- | Convert a RawCommand to its corresponding command line tokens 
+rawCommandToTokens :: RawCommand -> [String]
+rawCommandToTokens rawCmd = 
+  let flagToTokens :: (String, Maybe String) -> [String]
+      flagToTokens (name, maybeValue) =
+        case maybeValue of
+          Just value -> ["--" ++ name ++ "=", value]
+          Nothing -> ["--" ++ name]
+      flagTokens = concatMap flagToTokens (rawFlags rawCmd)
+      argTokens = rawArguments rawCmd
+      cmdName = rawName rawCmd
+  in cmdName : flagTokens ++ argTokens
 
-handleFlag ::
-  [Flag] ->
-  String ->
-  [String] ->
-  [(String, Maybe String)] ->
-  [String] ->
-  [String] ->
-  Either CommandError ([(String, Maybe String)], [String])
-handleFlag availableFlags flagToken rest parsedFlags args usedFlags = do
-  flag <- matchFlag flagToken availableFlags
-  let conflictingFlagNames = longName flag : maybeToList (shortName flag)
-  if any (`elem` usedFlags) conflictingFlagNames
-    then Left $ CommandError $ "Conflicting flags used: " ++ show conflictingFlagNames
-    else case flagType flag of
-      RequiresArg -> handleRequiredFlag availableFlags flag rest parsedFlags args (conflictingFlagNames ++ usedFlags)
-      NoArg -> parseTokens availableFlags rest ((longName flag, Nothing) : parsedFlags) args (conflictingFlagNames ++ usedFlags) False
-
-handleRequiredFlag ::
-  [Flag] ->
-  Flag ->
-  [String] ->
-  [(String, Maybe String)] ->
-  [String] ->
-  [String] ->
-  Either CommandError ([(String, Maybe String)], [String])
-handleRequiredFlag _ flag [] _ _ _ =
-  Left $ CommandError $ "Flag " ++ longName flag ++ " requires a value, but none was provided."
-handleRequiredFlag availableFlags flag (value : rest) parsedFlags args usedFlags =
-  parseTokens availableFlags rest ((longName flag, Just value) : parsedFlags) args usedFlags False
-
--- Determines if a token is a flag
+-- | Checks if a token is a flag (starts with -)
 isFlag :: String -> Bool
 isFlag ('-' : _) = True
 isFlag _ = False
 
--- Matches a token to a Flag definition
-matchFlag :: String -> [Flag] -> Either CommandError Flag
-matchFlag token flags =
-  let strippedToken = dropWhile (== '-') token -- Remove leading '-' or '--'
-   in case filter (\f -> longName f == strippedToken || shortName f == Just strippedToken) flags of
-        [] -> Left $ CommandError $ "Unknown flag: " ++ token
-        [flag] -> Right flag
-        _ -> Left $ CommandError $ "Ambiguous flag: " ++ token
+-- | Checks if a flag is an argument flag
+isArgFlag :: String -> Bool
+isArgFlag flag = '=' `elem` flag
+
+-- | Extracts the flag name from a flag token (e.g. "--update=" -> "update")
+extractFlagName :: String -> String
+extractFlagName flag = 
+  let stripped = dropWhile (== '-') flag in
+  takeWhile (/= '=') stripped
+
+-- | Main flag parsing function stays the same but calls simplified functions
+parseFlagsAndArgs :: [String] -> Either CommandError ([(String, Maybe String)], [String])
+parseFlagsAndArgs tokens = parseTokens tokens [] [] False
+
+-- | Recursive token parser that accumulates flags and arguments
+parseTokens :: [String] -> [(String, Maybe String)] -> [String] -> Bool -> Either CommandError ([(String, Maybe String)], [String])
+parseTokens [] parsedFlags args _ = 
+    Right (reverse parsedFlags, reverse args)
+parseTokens (x : xs) parsedFlags args seenArg
+    | not seenArg && isFlag x = 
+        handleFlag x xs parsedFlags args
+    | otherwise = 
+        parseTokens xs parsedFlags (x : args) True
+
+-- | Processes a flag token, handling potential errors and flag values
+handleFlag ::
+  String ->      -- flag token (e.g. "--update" or "--message=value")
+  [String] ->    -- remaining tokens
+  [(String, Maybe String)] ->  -- accumulated flags
+  [String] ->    -- accumulated args
+  Either CommandError ([(String, Maybe String)], [String])
+handleFlag flagToken rest parsedFlags args = 
+    let rawName = extractFlagName flagToken 
+        mappedName = mapFlagName rawName allFlags
+        -- Split on '=' to check for immediate value
+        (flag, immediateValue) = span (/= '=') flagToken
+        value = case immediateValue of
+            ('=':val) -> if null val then Nothing else Just val
+            _ -> Nothing
+    in 
+    if isArgFlag flagToken
+        then case (value, rest) of
+            (Just val, remaining) ->  -- Value immediately follows '='
+                parseTokens remaining ((mappedName, Just val) : parsedFlags) args False
+            (Nothing, value:remaining) ->  -- Value is in next token
+                parseTokens remaining ((mappedName, Just value) : parsedFlags) args False
+            (Nothing, []) -> 
+                Left $ CommandError $ "Flag " ++ rawName ++ " requires a value followed by =."
+        else
+            parseTokens rest ((mappedName, Nothing) : parsedFlags) args False
+
+-- | Map a flag token to its long name if it's a short flag, otherwise return the original token
+mapFlagName :: String -> [Flag] -> String
+mapFlagName token flags =
+    let 
+        strippedToken = dropWhile (== '-') token
+        isShortFlag = "-" `isPrefixOf` token && not ("--" `isPrefixOf` token)
+    in 
+        -- If it's a short flag, try to find its matching long name
+        case find (\f -> shortName f == Just strippedToken) flags of
+            Just flag -> longName flag    -- Found matching flag, use its long name
+            Nothing -> strippedToken      -- No match, just use original name

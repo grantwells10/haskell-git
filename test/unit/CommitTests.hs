@@ -1,3 +1,6 @@
+-- | CommitTests.hs
+-- | This file contains the implementation of the commit tests
+
 {-# LANGUAGE OverloadedStrings #-}
 
 module CommitTests
@@ -6,12 +9,7 @@ module CommitTests
 where
 
 import CommandHandler ()
-import CommandParser
-  ( Command (..),
-    CommandError (..),
-    ParsedCommand (..),
-    defaultValidate,
-  )
+import Command ( Command (..), CommandError (..) )
 import Commit
   ( Commit (..),
     Tree (..),
@@ -28,11 +26,8 @@ import System.FilePath (splitDirectories, takeDirectory, takeFileName, (</>))
 import Test.HUnit
     ( assertBool, assertEqual, assertFailure, Test(..) )
 import TestUtils
-    ( letCommands,
-      createFiles,
+    ( createFiles,
       runCommand,
-      runAddCommand,
-      runCommitCommand,
       withTestRepo )
 import Utils ( getHeadCommitOid )
 import System.Directory (removeFile, removeDirectoryRecursive)
@@ -40,8 +35,7 @@ import System.Directory (removeFile, removeDirectoryRecursive)
 -- | Asserts that a commit command fails with a CommandError
 assertCommitFailure :: [(String, Maybe String)] -> [String] -> IO ()
 assertCommitFailure flags args = do
-  let commitCmd = letCommands !! 2 -- "commit" command
-  result <- runCommand commitCmd flags args
+  result <- runCommand Command.Commit flags args
   case result of
     Left _ -> return () -- Expected to fail
     Right _ -> assertFailure "Expected commit to fail, but it succeeded."
@@ -68,16 +62,26 @@ createAndAddFiles :: [(FilePath, String)] -> IO ()
 createAndAddFiles files = do
   createFiles files
   let filePaths = map fst files
-  runAddCommand [] filePaths
+  result <- runCommand Command.Add [] filePaths
+  case result of
+    Left err -> error $ "Failed to add files: " ++ show err
+    Right _ -> return ()
 
 -- | Helper function to perform commit with a message
 commitWithMessage :: String -> IO ()
 commitWithMessage msg = do
-  runCommitCommand [("message", Just msg)] []
+  result <- runCommand Command.Commit [("message", Just msg)] []
+  case result of
+    Left err -> error $ "Failed to commit: " ++ show err
+    Right _ -> return ()
 
 -- | Helper function to perform commit with flags and arguments
 commitWithFlags :: [(String, Maybe String)] -> [String] -> IO ()
-commitWithFlags = runCommitCommand
+commitWithFlags flags args = do
+  result <- runCommand Command.Commit flags args
+  case result of
+    Left err -> error $ "Failed to commit: " ++ show err
+    Right _ -> return ()
 
 -- | Collection of all commit tests
 commitTests :: Test
@@ -262,27 +266,12 @@ testHandleDeletedFiles = TestCase $ withTestRepo $ \testDir -> do
     removeFile "file1.txt"
 
     -- Add changes (which includes deletion)
-    runAddCommand [] ["file1.txt"]
-
-    -- Commit after deletion
-    commitWithMessage "Remove file1.txt"
-    headOid <- getHeadCommitOid testDir
-
-    -- Deserialize the latest commit
-    commitResult <- deserializeCommit headOid
-    case commitResult of
-        Left err -> assertFailure $ "Failed to deserialize commit: " ++ err
-        Right commit -> do
-            -- Deserialize the tree
-            treeResult <- deserializeTree (treeOid commit)
-            case treeResult of
-                Left err -> assertFailure $ "Failed to deserialize tree: " ++ err
-                Right tree -> do
-                    -- Read the updated index
-                    updatedIndex <- readIndexFile
-                    -- Verify 'file1.txt' is no longer in the index and that 'file2.txt' is still there
-                    assertBool "file1.txt should be removed from the index" (not $ Map.member "file1.txt" updatedIndex)
-                    assertBool "file2.txt should still be in the index" (Map.member "file2.txt" updatedIndex)
+    runCommand Command.Add [] ["file1.txt"]
+    -- Read the updated index
+    updatedIndex <- readIndexFile
+    -- Verify 'file1.txt' is no longer in the index and that 'file2.txt' is still there
+    assertBool "file1.txt should be removed from the index" (not $ Map.member "file1.txt" updatedIndex)
+    assertBool "file2.txt should still be in the index" (Map.member "file2.txt" updatedIndex)
 
 -- | Test handling deletion of tracked directories between commits
 testHandleDeletedDirectory :: Test
@@ -301,28 +290,18 @@ testHandleDeletedDirectory = TestCase $ withTestRepo $ \testDir -> do
     removeDirectoryRecursive "src"
 
     -- Add changes (which includes directory deletion)
-    runAddCommand [] ["src"] -- Attempt to add the deleted directory
+    runCommand Command.Add [] ["src"] -- Attempt to add the deleted directory
 
     -- Commit after deletion
     commitWithMessage "Remove src directory"
-    headOid <- getHeadCommitOid testDir
 
-    -- Deserialize the latest commit
-    commitResult <- deserializeCommit headOid
-    case commitResult of
-        Left err -> assertFailure $ "Failed to deserialize commit: " ++ err
-        Right commit -> do
-            -- Deserialize the tree
-            treeResult <- deserializeTree (treeOid commit)
-            case treeResult of
-                Left err -> assertFailure $ "Failed to deserialize tree: " ++ err
-                Right tree -> do
-                    -- Read the updated index
-                    updatedIndex <- readIndexFile
-                    -- Verify 'src' and its contained files are no longer in the index
-                    let filesUnderSrc = ["src/main.hs", "src/utils/helpers.hs"]
-                    forM_ filesUnderSrc $ \file -> do
-                        assertBool (file ++ " should be removed from the index") (not $ Map.member file updatedIndex)
-                    -- Verify that other files are still present
-                    assertBool "file1.txt should still be in the index" (Map.member "file1.txt" updatedIndex)
-                    assertBool "file2.txt should still be in the index" (Map.member "file2.txt" updatedIndex)
+    -- Read the updated index
+    updatedIndex <- readIndexFile
+
+    -- Verify 'src' and its contained files are no longer in the index
+    let filesUnderSrc = ["src/main.hs", "src/utils/helpers.hs"]
+    forM_ filesUnderSrc $ \file -> do
+        assertBool (file ++ " should be removed from the index") (not $ Map.member file updatedIndex)
+    -- Verify that other files are still present
+    assertBool "file1.txt should still be in the index" (Map.member "file1.txt" updatedIndex)
+    assertBool "file2.txt should still be in the index" (Map.member "file2.txt" updatedIndex)

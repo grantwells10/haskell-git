@@ -1,7 +1,8 @@
 module Main where
 
-import CommandHandler (commandHandler, commands)
-import CommandParser (Command (..), CommandError (..), parseInput)
+import CommandHandler (commandHandler)
+import Command (Command (..), CommandError (..))
+import CommandParser (parseInput)
 import Control.Monad (unless)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.IO.Class (liftIO)
@@ -13,7 +14,7 @@ main = do
   input <- getArgs
   result <- runExceptT $ do
     -- Parse the input
-    cmd <- except $ parseInput commands input
+    cmd <- except $ parseInput input
     -- Handle the command
     cmdResult <- liftIO $ commandHandler cmd
     output <- except cmdResult

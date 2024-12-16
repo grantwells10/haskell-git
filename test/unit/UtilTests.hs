@@ -1,3 +1,6 @@
+-- | UtilTests.hs
+-- | This file contains the implementation of the utility tests
+
 {-# LANGUAGE OverloadedStrings #-}
 
 module UtilTests

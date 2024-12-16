@@ -1,3 +1,6 @@
+-- | LogTests.hs
+-- | This file contains the implementation of the log tests
+
 {-# LANGUAGE OverloadedStrings #-}
 
 module LogTests
@@ -5,9 +8,9 @@ module LogTests
   )
 where
 
-import CommandHandler (commandHandler, commands)
-import CommandParser
-  ( Command(..), CommandError(..), ParsedCommand(..) )
+import CommandHandler (commandHandler)
+import CommandParser (ParsedCommand(..) )
+import Command ( Command (..), CommandError (..) )
 import Control.Monad (forM_, when)
 import Data.List (isPrefixOf, find)
 import Data.Map.Strict qualified as Map
@@ -24,8 +27,6 @@ import Test.HUnit
     Test(TestList) )
 import TestUtils
   ( createFiles,
-    runAddCommand,
-    runCommitCommand,
     runCommand,
     withTestRepo )
 import Utils ( readFileAsByteString, getHeadCommitOid )
@@ -63,6 +64,7 @@ countCommitsInLog logOutput =
 trimSpaces :: String -> String
 trimSpaces = reverse . dropWhile (== ' ') . reverse . dropWhile (== ' ')
 
+-- | Helper function to extract the commit message from a commit section
 extractCommitMessage :: String -> String
 extractCommitMessage section =
   let linesOfSection = lines section
@@ -72,31 +74,11 @@ extractCommitMessage section =
       cleanMessages = map (dropWhile (== ' ')) msg
   in trimSpaces $ unwords cleanMessages
 
--- | Retrieve the 'log' command from the list of available commands
-getLogCommand :: [Command] -> Either CommandError Command
-getLogCommand cmds =
-  case find (\cmd -> subcommand cmd == "log") cmds of
-    Just cmd -> Right cmd
-    Nothing -> Left $ CommandError "Log command not found."
-
 -- | Test that 'hgit log' outputs "No commits found." when there are no commits
 testLogNoCommits :: Test
 testLogNoCommits = TestCase $ withTestRepo $ \_testDir -> do
-  -- Retrieve the 'log' command
-  logCommand <- case getLogCommand commands of
-                  Left err -> assertFailure (show err)
-                  Right cmd -> return cmd
-
-  -- Construct the ParsedCommand
-  let parsedLogCmd = ParsedCommand
-                      { parsedSubcommand = logCommand
-                      , parsedFlags = []
-                      , parsedArguments = []
-                      }
-
-  -- Invoke the 'log' command
-  logResult <- commandHandler parsedLogCmd
-
+  
+  logResult <- runCommand Command.Log [] []
   -- Check the output
   case logResult of
     Left err -> assertFailure $ "Log command failed: " ++ show err
@@ -106,28 +88,15 @@ testLogNoCommits = TestCase $ withTestRepo $ \_testDir -> do
 -- | Test that 'hgit log' correctly displays one commit
 testLogSingleCommit :: Test
 testLogSingleCommit = TestCase $ withTestRepo $ \_testDir -> do
-  -- Retrieve the 'log' command
-  logCommand <- case getLogCommand commands of
-                  Left err -> assertFailure (show err)
-                  Right cmd -> return cmd
-
   -- Create and commit a single file
   let initialFiles =
         [ ("file1.txt", "Hello World")
         ]
   createFiles initialFiles
-  runAddCommand [] ["file1.txt"]
-  runCommitCommand [("message", Just "Initial commit")] []
+  runCommand Command.Add [] ["file1.txt"]
+  runCommand Command.Commit [("message", Just "Initial commit")] []
 
-  -- Construct the ParsedCommand
-  let parsedLogCmd = ParsedCommand
-                      { parsedSubcommand = logCommand
-                      , parsedFlags = []
-                      , parsedArguments = []
-                      }
-
-  -- Invoke the 'log' command
-  logResult <- commandHandler parsedLogCmd
+  logResult <- runCommand Command.Log [] []
 
   -- Check the output
   case logResult of
@@ -139,45 +108,32 @@ testLogSingleCommit = TestCase $ withTestRepo $ \_testDir -> do
 -- | Test that 'hgit log' correctly displays multiple commits
 testLogMultipleCommits :: Test
 testLogMultipleCommits = TestCase $ withTestRepo $ \_testDir -> do
-  -- Retrieve the 'log' command
-  logCommand <- case getLogCommand commands of
-                  Left err -> assertFailure (show err)
-                  Right cmd -> return cmd
-
   -- Create and commit first file
   let files1 =
         [ ("file1.txt", "Hello World"),
           ("file2.txt", "Initial commit file")
         ]
   createFiles files1
-  runAddCommand [] ["file1.txt", "file2.txt"]
-  runCommitCommand [("message", Just "Initial commit")] []
+  runCommand Command.Add [] ["file1.txt", "file2.txt"]
+  runCommand Command.Commit [("message", Just "Initial commit")] []
 
   -- Create and commit second file
   let files2 =
         [ ("file3.txt", "Second commit file")
         ]
   createFiles files2
-  runAddCommand [] ["file3.txt"]
-  runCommitCommand [("message", Just "Second commit")] []
+  runCommand Command.Add [] ["file3.txt"]
+  runCommand Command.Commit [("message", Just "Second commit")] []
 
   -- Create and commit third file
   let files3 =
         [ ("file4.txt", "Third commit file")
         ]
   createFiles files3
-  runAddCommand [] ["file4.txt"]
-  runCommitCommand [("message", Just "Third commit")] []
+  runCommand Command.Add [] ["file4.txt"]
+  runCommand Command.Commit [("message", Just "Third commit")] []
 
-  -- Construct the ParsedCommand
-  let parsedLogCmd = ParsedCommand
-                      { parsedSubcommand = logCommand
-                      , parsedFlags = []
-                      , parsedArguments = []
-                      }
-
-  -- Invoke the 'log' command
-  logResult <- commandHandler parsedLogCmd
+  logResult <- runCommand Command.Log [] []
 
   -- Check the output
   case logResult of
@@ -189,37 +145,24 @@ testLogMultipleCommits = TestCase $ withTestRepo $ \_testDir -> do
 -- | Test that the commits in the log match the expected messages
 testLogCommitMessages :: Test
 testLogCommitMessages = TestCase $ withTestRepo $ \_testDir -> do
-  -- Retrieve the 'log' command
-  logCommand <- case getLogCommand commands of
-                  Left err -> assertFailure (show err)
-                  Right cmd -> return cmd
-
   -- Create and commit first file
   let files1 =
         [ ("file1.txt", "Hello World"),
           ("file2.txt", "Initial commit file")
         ]
   createFiles files1
-  runAddCommand [] ["file1.txt", "file2.txt"]
-  runCommitCommand [("message", Just "Initial commit")] []
+  runCommand Command.Add [] ["file1.txt", "file2.txt"]
+  runCommand Command.Commit [("message", Just "Initial commit")] []
 
   -- Create and commit second file
   let files2 =
         [ ("file3.txt", "Second commit file")
         ]
   createFiles files2
-  runAddCommand [] ["file3.txt"]
-  runCommitCommand [("message", Just "Second commit")] []
+  runCommand Command.Add [] ["file3.txt"]
+  runCommand Command.Commit [("message", Just "Second commit")] []
 
-  -- Construct the ParsedCommand
-  let parsedLogCmd = ParsedCommand
-                      { parsedSubcommand = logCommand
-                      , parsedFlags = []
-                      , parsedArguments = []
-                      }
-
-  -- Invoke the 'log' command
-  logResult <- commandHandler parsedLogCmd
+  logResult <- runCommand Command.Log [] []
 
   -- Check the output
   case logResult of

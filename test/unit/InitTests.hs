@@ -1,3 +1,6 @@
+-- | InitTests.hs
+-- | This file contains the implementation of the init tests
+
 {-# LANGUAGE OverloadedStrings #-}
 
 module InitTests
@@ -5,7 +8,8 @@ module InitTests
   )
 where
 
-import CommandParser (Command (..), CommandError (..), ParsedCommand (..), defaultValidate)
+import CommandParser (ParsedCommand (..))
+import Command (Command (..), CommandError (..))
 import Commit (deserializeCommit, deserializeTree, getCurrentCommitOid)
 import Control.Monad (when)
 import Data.ByteString.Char8 qualified as BS8
@@ -20,26 +24,20 @@ import System.Directory
     setCurrentDirectory,
   )
 import System.FilePath ((</>))
-import Test.HUnit ( assertBool, assertFailure, Test(..) )
+import Test.HUnit ( assertBool, assertFailure, Test(..))
 import CommandHandler ( commandHandler )
-import TestUtils()
+import TestUtils(runCommand)
 import Utils (createDirectoryIfMissing')
 
--- | Ensure the `git init` command creates the expected structure.
-testGitInit :: Test
-testGitInit = TestCase $ do
+-- | HGit init command creates the expected structure.
+testHGitInit :: Test
+testHGitInit = TestCase $ do
   currentDir <- getCurrentDirectory
   let testDir = currentDir </> "test-dir"
   doesDirectoryExist testDir >>= \exists -> when exists (removeDirectoryRecursive testDir)
   createDirectoryIfMissing' testDir
   setCurrentDirectory testDir
-  let initCommand =
-        ParsedCommand
-          { parsedSubcommand = Command "init" "" [] defaultValidate,
-            parsedFlags = [],
-            parsedArguments = []
-          }
-  result <- commandHandler initCommand
+  result <- runCommand Command.Init [] []
 
   case result of
     Left (CommandError err) -> assertFailure $ "Command failed with error: " ++ err
@@ -67,4 +65,6 @@ testGitInit = TestCase $ do
 initTests :: Test
 initTests =
   TestLabel "Init Tests" $
-    TestList [TestLabel "Git Init" testGitInit]
+    TestList [
+      TestLabel "HGit Init" testHGitInit
+    ]

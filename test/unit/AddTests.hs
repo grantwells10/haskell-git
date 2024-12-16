@@ -1,3 +1,6 @@
+-- | AddTests.hs
+-- | This file contains the implementation of the add tests
+
 {-# LANGUAGE OverloadedStrings #-}
 
 module AddTests
@@ -5,10 +8,8 @@ module AddTests
   )
 where
 
-import CommandParser
-    ( CommandError(CommandError),
-      ParsedCommand(ParsedCommand, parsedArguments, parsedSubcommand,
-                    parsedFlags) )
+import CommandParser (ParsedCommand(..))
+import Command (CommandError(..), Command(..))
 import Commit (buildTree)
 import Control.Monad (forM_, when)
 import Data.ByteString.Char8 qualified as BS8
@@ -27,10 +28,8 @@ import Test.HUnit
   )
 import Utils ( sha1Hash )
 import TestUtils
-    ( letCommands,
-      createFiles,
+    ( createFiles,
       runCommand,
-      runAddCommand,
       verifyIndex,
       verifyBlobExists,
       withTestRepo )
@@ -43,7 +42,7 @@ testAddSingleFile = TestCase $ withTestRepo $ \testDir -> do
   createFiles files
 
   -- Run 'git add file1.txt'
-  runAddCommand [] ["file1.txt"]
+  runCommand Command.Add [] ["file1.txt"]
 
   -- Verify file1.txt is in index
   verifyIndex [("file1.txt", True)]
@@ -69,7 +68,7 @@ testAddMultipleFiles = TestCase $ withTestRepo $ \testDir -> do
   createFiles files
 
   -- Run 'git add file1.txt file2.txt dir1/file3.txt'
-  runAddCommand [] ["file1.txt", "file2.txt", "dir1/file3.txt"]
+  runCommand Command.Add [] ["file1.txt", "file2.txt", "dir1/file3.txt"]
 
   -- Verify all files are in index
   verifyIndex $ map (\(f, _) -> (f, True)) files
@@ -89,7 +88,7 @@ testAddFilesWithPaths = TestCase $ withTestRepo $ \testDir -> do
   createFiles files
 
   -- Run 'git add src/main.hs src/utils/helpers.hs docs/readme.md'
-  runAddCommand [] ["src/main.hs", "src/utils/helpers.hs", "docs/readme.md"]
+  runCommand Command.Add [] ["src/main.hs", "src/utils/helpers.hs", "docs/readme.md"]
 
   -- Verify all files are in index
   verifyIndex $ map (\(f, _) -> (f, True)) files
@@ -111,7 +110,7 @@ testAddAllFiles = TestCase $ withTestRepo $ \testDir -> do
   createFiles files
 
   -- Run 'git add .'
-  runAddCommand [] ["."]
+  runCommand Command.Add [] ["."]
 
   -- Verify index contains all files except .hgit
   verifyIndex $ map (\(f, _) -> (f, True)) files ++ [(".hgit", False)]
@@ -130,7 +129,7 @@ testAddUpdateTrackedFiles = TestCase $ withTestRepo $ \testDir -> do
   createFiles files
 
   -- Initial add
-  runAddCommand [] ["file1.txt", "file2.txt"]
+  runCommand Command.Add [] ["file1.txt", "file2.txt"]
 
   -- Modify one file
   createFiles [("file1.txt", "Updated content of file1.txt")]
@@ -140,7 +139,7 @@ testAddUpdateTrackedFiles = TestCase $ withTestRepo $ \testDir -> do
   let initialIndexSize = Map.size indexBefore
 
   -- Run 'git add -u'
-  runAddCommand [("update", Nothing)] []
+  runCommand Command.Add [("update", Nothing)] []
 
   -- Read index after 'git add -u'
   indexAfter <- readIndexFile
@@ -181,7 +180,7 @@ testAddPreventHgit = TestCase $ withTestRepo $ \testDir -> do
   createFiles files
 
   -- Run 'git add .'
-  runAddCommand [] ["."]
+  runCommand Command.Add [] ["."]
 
   -- Verify .hgit/config is not in index and file1.txt is
   verifyIndex [(".hgit/config", False), ("file1.txt", True)]
@@ -196,26 +195,12 @@ testAddInvalidCombinations = TestCase $ withTestRepo $ \testDir -> do
   createFiles [("file1.txt", "Hello World")]
 
   -- Attempt to combine 'git add -u' with 'git add .'
-  let addCmd = letCommands !! 1 -- "add" command
-  let parsedAddCmd =
-        ParsedCommand
-          { parsedSubcommand = addCmd,
-            parsedFlags = [("update", Nothing)],
-            parsedArguments = ["."]
-          }
-  resultAdd <- runCommand addCmd [("update", Nothing)] ["."]
+  resultAdd <- runCommand Command.Add [("update", Nothing)] ["."]
   case resultAdd of
     Left (CommandError _) -> return () -- Expected to fail
     Right _ -> assertFailure "Combining 'add -u' with '.' should fail"
 
-  -- Attempt to combine 'git add -u' with specific files
-  let parsedAddCmd2 =
-        ParsedCommand
-          { parsedSubcommand = addCmd,
-            parsedFlags = [("update", Nothing)],
-            parsedArguments = ["file1.txt"]
-          }
-  resultAdd2 <- runCommand addCmd [("update", Nothing)] ["file1.txt"]
+  resultAdd2 <- runCommand Command.Add [("update", Nothing)] ["file1.txt"]
   case resultAdd2 of
     Left (CommandError _) -> return () -- Expected to fail
     Right _ -> assertFailure "Combining 'add -u' with specific files should fail"
@@ -225,7 +210,7 @@ testBlobFileManagement :: Test
 testBlobFileManagement = TestCase $ withTestRepo $ \testDir -> do
   -- Create and add a file
   createFiles [("file1.txt", "Initial content")]
-  runAddCommand [] ["file1.txt"]
+  runCommand Command.Add [] ["file1.txt"]
 
   -- Read index and get initial OID
   indexMap <- readIndexFile
@@ -233,7 +218,7 @@ testBlobFileManagement = TestCase $ withTestRepo $ \testDir -> do
 
   -- Modify the file and add again
   createFiles [("file1.txt", "Updated content")]
-  runAddCommand [] ["file1.txt"]
+  runCommand Command.Add [] ["file1.txt"]
 
   -- Read index and get updated OID
   indexMapAfter <- readIndexFile
@@ -253,7 +238,7 @@ testBlobFileManagement = TestCase $ withTestRepo $ \testDir -> do
     updatedOid
 
   -- Re-add without modifying
-  runAddCommand [] ["file1.txt"]
+  runCommand Command.Add [] ["file1.txt"]
 
   -- Read index and ensure OID remains the same
   indexMapFinal <- readIndexFile

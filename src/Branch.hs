@@ -1,3 +1,7 @@
+-- | Branch.hs
+-- | This file contains the implementation of the branch command
+-- | It allows for creating, listing, and deleting branches
+
 {-# LANGUAGE OverloadedStrings #-}
 
 module Branch
@@ -7,7 +11,7 @@ module Branch
   )
 where
 
-import CommandParser (CommandError (..))
+import Command (CommandError (..))
 import Control.Exception (throwIO)
 import Control.Monad (unless, when)
 import System.Directory

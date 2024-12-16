@@ -1,6 +1,11 @@
-module CommandHandler (commandHandler, commands) where
+-- | CommandHandler.hs
+-- | This file contains the implementation of the command handler
+-- | It handles the execution of commands and returns the appropriate output
 
-import CommandParser (Command (..), CommandError (..), Flag (..), FlagType (..), ParsedCommand (..), defaultValidate)
+module CommandHandler (commandHandler) where
+
+import Command (Command (..), CommandError (..), Flag (..))
+import CommandParser (ParsedCommand (..))
 import Commit (buildTree, createCommitContent, getCurrentCommitOid, updateHEAD, Commit, parentOid, traverseCommits, checkoutCommit, anyModifiedFile, uncommittedChangesExist)
 import Control.Exception (SomeException, throwIO, try)
 import Control.Monad (unless, when)
@@ -35,87 +40,29 @@ import Status
       computeUntrackedFiles,
       formatStatusOutput )
 
-commands :: [Command]
-commands =
-  [ Command
-      { subcommand = "init",
-        description =
-          "Creates the .hgit directory...",
-        flags = [],
-        validate = defaultValidate
-      },
-    Command
-      { subcommand = "add",
-        description = "Adds file(s) to the index.",
-        flags =
-          [ Flag {longName = "update", shortName = Just "u", flagType = NoArg}
-          ],
-        validate = validateAddCommand
-      },
-    Command
-      { subcommand = "commit",
-        description = "Creates a new commit from the current index...",
-        flags =
-          [Flag {longName = "message", shortName = Just "m", flagType = RequiresArg}],
-        validate = validateCommitCommand
-      },
-    Command
-      { subcommand = "branch",
-        description =
-          "List, create, or delete branches...",
-        flags =
-          [ Flag { longName = "delete", shortName = Just "d", flagType = RequiresArg }
-          ],
-        validate = validateBranchCommand
-      },
-    Command
-      { subcommand = "switch",
-        description =
-          "Switches to an existing branch. Usage: 'hgit switch <branchname>'",
-        flags = [],
-        validate = validateSwitchCommand
-      },
-    Command
-      { subcommand = "log",
-        description = "Displays commit logs...",
-        flags = [],
-        validate = defaultValidate
-      },
-          Command
-      { subcommand = "status",
-        description = "Show the working tree status.",
-        flags = [],
-        validate = defaultValidate
-      }
-  ]
-
+-- | Main entry point for handling commands
 commandHandler :: ParsedCommand -> IO (Either CommandError String)
 commandHandler parsedCmd = do
-  let cmdStr = subcommand . parsedSubcommand $ parsedCmd
-      flags = parsedFlags parsedCmd
-      args = parsedArguments parsedCmd
-
-  when (cmdStr /= "init") $ do
+  let command = cmd parsedCmd
+  when (command /= Init) $ do
     repoExists <- doesDirectoryExist =<< getHgitPath
     unless repoExists $
-      throwIO $
-        userError ".hgit doesn't exist, call 'hgit init' first"
+      throwIO $ CommandError ".hgit doesn't exist, call 'hgit init' first"
 
-  result <- try $ case cmdStr of
-    "init" -> handleInit
-    "add" -> handleAdd flags args
-    "commit" -> handleCommit flags args
-    "branch" -> handleBranch flags args
-    "log" -> handleLogCommand
-    "switch" -> handleSwitchCommand args
-    "status" -> handleStatus
-
-    _ -> throwIO $ userError $ "Unknown subcommand: " ++ cmdStr
+  result <- try $ case command of
+    Init -> handleInit
+    Add -> handleAdd (parsedFlags parsedCmd) (parsedArguments parsedCmd)
+    Commit -> handleCommit (parsedFlags parsedCmd) (parsedArguments parsedCmd)
+    Branch -> handleBranch (parsedFlags parsedCmd) (parsedArguments parsedCmd)
+    Log -> handleLogCommand
+    Switch -> handleSwitchCommand (parsedArguments parsedCmd)
+    Status -> handleStatus
 
   case result of
     Left (ex :: SomeException) -> return $ Left (CommandError $ show ex)
     Right output -> return $ Right output
 
+-- | Handles the init command
 handleInit :: IO String
 handleInit = do
   hgitPath <- getHgitPath
@@ -136,37 +83,6 @@ handleInit = do
       headPath <- getHEADFilePath
       writeFileFromByteString headPath $ stringToByteString headContent
 
-validateAddCommand :: [(String, Maybe String)] -> [String] -> Either CommandError ()
-validateAddCommand flags args =
-  case (flags, args) of
-    ([("update", Nothing)], []) -> Right ()
-    ([], ["."]) -> Right ()
-    ([], _ : _) -> Right ()
-    _ -> Left $ CommandError "Invalid usage of 'hgit add'. Use 'hgit add -u', 'hgit add <file>... ', or 'hgit add .'"
-
-validateCommitCommand :: [(String, Maybe String)] -> [String] -> Either CommandError ()
-validateCommitCommand flags args =
-  case (flags, args) of
-    ([("message", Just msg)], []) | not (null msg) -> Right ()
-    _ -> Left $ CommandError "Invalid usage of 'hgit commit'. Use 'hgit commit -m \"msg\"'.'"
-
-validateBranchCommand :: [(String, Maybe String)] -> [String] -> Either CommandError ()
-validateBranchCommand flags args =
-  case flags of
-    [("delete", Just _)] -> Right () -- Deleting a branch
-    [] ->
-      case args of
-        [] -> Right () -- Listing branches
-        [_] -> Right () -- Creating a branch
-        _ -> Left $ CommandError "Invalid usage of 'hgit branch'."
-    _ -> Left $ CommandError "Invalid flags for 'hgit branch'."
-
-validateSwitchCommand :: [(String, Maybe String)] -> [String] -> Either CommandError ()
-validateSwitchCommand _ args =
-  case args of
-    [_] -> Right ()
-    _ -> Left $ CommandError "Invalid usage of 'hgit switch'."
-
 handleAdd :: [(String, Maybe String)] -> [String] -> IO String
 handleAdd flags args = do
   indexMap <- readIndexFile
@@ -177,6 +93,7 @@ handleAdd flags args = do
       writeIndexFile updatedIndexMap
       return ""
 
+-- | Handles the commit command
 handleCommit :: [(String, Maybe String)] -> [String] -> IO String
 handleCommit flags _args = do
   let Just (Just commitMsg) = lookup "message" flags
@@ -209,6 +126,7 @@ handleBranch flags args = do
         _ -> throwIO $ userError "Invalid usage of 'hgit branch'."
     _ -> throwIO $ userError "Invalid usage of 'hgit branch'."
 
+-- | Handles the log command
 handleLogCommand :: IO String
 handleLogCommand = do
   hgitPath <- getHgitPath
@@ -219,6 +137,7 @@ handleLogCommand = do
     Nothing -> return "No commits found."
     Just oid -> traverseCommits oid []
 
+-- | Handles the switch command
 handleSwitchCommand :: [String] -> IO String
 handleSwitchCommand [branchName] = do
   headsPath <- getHeadsPath
@@ -242,6 +161,7 @@ handleSwitchCommand [branchName] = do
   return $ "Switched to branch '" ++ branchName ++ "'"
 handleSwitchCommand _ = error "Invalid usage. This should never happen due to validateSwitchCommand."
 
+-- | Handles the status command
 handleStatus :: IO String
 handleStatus = do
   branchName <- getCurrentBranchName

@@ -1,3 +1,7 @@
+-- | Status.hs
+-- | This file contains the implementation of the status command
+-- | It computes the status of the repository and formats the output
+
 module Status
   ( getCurrentBranchName,
     getHEADTreeMap,
@@ -17,9 +21,10 @@ import Data.Maybe (mapMaybe)
 import System.FilePath (takeFileName, (</>))
 import Control.Monad (forM)
 import Utils (getHEADFilePath, sha1Hash)
-import Commit (deserializeCommit, deserializeTree, getCurrentCommitOid, Commit(..), Tree(..))
+import Commit (deserializeCommit, deserializeTree, getCurrentCommitOid, Commit(..), Tree(..), treeToIndexMap)
 import Index (readIndexFile)
 
+-- | Gets the current branch name
 getCurrentBranchName :: IO String
 getCurrentBranchName = do
   headPath <- getHEADFilePath
@@ -27,6 +32,7 @@ getCurrentBranchName = do
   let refPath = BS8.unpack $ BS8.strip ref
   return $ takeFileName refPath
 
+-- | Gets the tree map of the HEAD commit
 getHEADTreeMap :: IO (Map FilePath String)
 getHEADTreeMap = do
   commitOidM <- getCurrentCommitOid
@@ -40,24 +46,9 @@ getHEADTreeMap = do
           treeResult <- deserializeTree (treeOid commit)
           case treeResult of
             Left _err -> return Map.empty
-            Right tree -> collectBlobsFromTree "." tree
+            Right tree -> treeToIndexMap tree "."
 
--- Recursively collect all blobs from the tree and its subtrees
-collectBlobsFromTree :: FilePath -> Tree -> IO (Map FilePath String)
-collectBlobsFromTree basePath (Tree entries) = do
-  fmap Map.unions $ forM entries $ \(typ, oid, name) -> case typ of
-    "blob" ->
-      -- Add this blob to the map
-      return $ Map.singleton (if basePath == "." then name else basePath </> name) oid
-    "tree" -> do
-      -- Recursively fetch blobs from the subtree
-      subtreeResult <- deserializeTree oid
-      case subtreeResult of
-        Left _ -> return Map.empty
-        Right subtree ->
-          collectBlobsFromTree (if basePath == "." then name else basePath </> name) subtree
-    _ -> return Map.empty
-
+-- | Builds the working directory map
 buildWorkingDirectoryMap :: [FilePath] -> IO (Map FilePath String)
 buildWorkingDirectoryMap files = do
   fmap Map.fromList $ forM files $ \f -> do
@@ -65,7 +56,7 @@ buildWorkingDirectoryMap files = do
     let oid = sha1Hash content
     return (f, oid)
 
--- Compute "Changes to be committed"
+-- | Computes the changes to be committed
 -- Compare HEAD vs Index
 computeChangesToBeCommitted :: Map FilePath String -> Map FilePath String -> [(String, FilePath)]
 computeChangesToBeCommitted headMap indexMap =
@@ -73,6 +64,7 @@ computeChangesToBeCommitted headMap indexMap =
       uniquePaths = Set.toList $ Set.fromList allPaths
   in mapMaybe (classifyChangeToCommit headMap indexMap) uniquePaths
 
+-- | Classifies the change to be committed
 classifyChangeToCommit :: Map FilePath String -> Map FilePath String -> FilePath -> Maybe (String, FilePath)
 classifyChangeToCommit headMap indexMap path =
   case (Map.lookup path headMap, Map.lookup path indexMap) of
@@ -82,8 +74,8 @@ classifyChangeToCommit headMap indexMap path =
       if headOid /= idxOid then Just ("modified", path) else Nothing
     (Nothing, Nothing) -> Nothing
 
--- Compute "Changes not staged for commit"
--- Compare Index vs Working Directory
+-- | Computes the changes not staged for commit
+-- | Compare Index vs Working Directory
 computeChangesNotStaged :: Map FilePath String -> Map FilePath String -> [(String, FilePath)]
 computeChangesNotStaged indexMap workingMap =
   let allPaths = Map.keys indexMap
@@ -97,13 +89,14 @@ classifyNotStagedChange indexMap workingMap path =
       if idxOid /= workOid then Just ("modified", path) else Nothing
     _ -> Nothing
 
--- Compute "Untracked files"
--- Files in working directory but not in index or HEAD
+-- | Computes the untracked files
+-- | Files in working directory but not in index or HEAD
 computeUntrackedFiles :: Map FilePath String -> Map FilePath String -> Map FilePath String -> [FilePath]
 computeUntrackedFiles headMap indexMap workingMap =
   let wdPaths = Map.keys workingMap
   in filter (\p -> not (Map.member p indexMap) && not (Map.member p headMap)) wdPaths
 
+-- | Formats the status output
 formatStatusOutput :: String -> [(String, FilePath)] -> [(String, FilePath)] -> [FilePath] -> String
 formatStatusOutput branch changesToCommit changesNotStaged untracked =
   let branchLine = "On branch " ++ branch ++ "\n"
@@ -116,10 +109,12 @@ formatStatusOutput branch changesToCommit changesNotStaged untracked =
      (if null notStagedSection then "" else "\n") ++
      untrackedSection
 
+-- | Formats the changes
 formatChanges :: [(String, FilePath)] -> String
 formatChanges xs =
   unlines [ "        " ++ statusType ++ ":   " ++ fp | (statusType, fp) <- xs ]
 
+-- | Formats the untracked files
 formatUntracked :: [FilePath] -> String
 formatUntracked xs =
   unlines [ "        " ++ fp | fp <- xs ]
