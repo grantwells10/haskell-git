@@ -1,7 +1,7 @@
 # Haskell Git (hgit)
 
 Grant Wells (gawells), Sid Sannapareddy (sidsan)
-git 
+ 
 ## TL;DR 
 A lightweight, pure Haskell library implementing core Git functionality for local-only repositories.
 
@@ -19,7 +19,7 @@ _src/_
 
 **Command.hs** -> Defining command data type constructors as well as corresponding functions (description, flags, validate)
 
-**CommandHandler.hs** -> handling each command, calling the smaller functions from other modules
+**CommandHandler.hs** -> Handling each command, calling the smaller functions from other modules, composing the functionality associated with each object that is part of the canonical Git object model
 
 **CommandParser.hs** -> Logic for a generalized command line input parser- extracting command, flags, and arguments from strings and creating ParsedCommands
 
@@ -37,7 +37,7 @@ _src/_
 
 _test_/
 
-**Test**
+**Test** -> Contains the TestList with all of the tests for the whole program + the quickcheck property to parse input
 
 _test/unit/_
 
@@ -82,15 +82,17 @@ __All of our implemented commands will rely on this object model, and they will 
       - hgit add . : add all files in current directory and in subdirectories including hidden files and directories starting with a . (except for .hgit of course)
   - hgit commit: Create a new commit containing the current contents of the index and the given log message describing the changes. This means that a new commit object will be created and its parent will be the current commit object pointed to by HEAD, and its root tree will be created containing all the blobs or trees for the root dir of the project. This will involve DFS with and from the lowest level dir up we compare OIDs with what's in the objects directory, if it already exists, just point to it, otherwise create it. Keep in mind that this step will not be adding any new blob files so it will only be adding new tree objects (if any) and a commit object.
     - Versions to support:
-      - hgit commit -m="commit msg" 
+      - hgit commit -m="commit msg"  
   - hgit branch: List, create, or delete branches
     - Versions to support:
       - hgit branch : list all branches with an asterisk to denote the current branch (Head pointer will contain this info)
-      - hgit branch "branchname": creates a new branch that points to the commit pointed to by the file pointed to by Head ptr
-      - hgit branch -d "branchname" : deletes the branch specified, and this would have to be a branch that the user is not currently on. Would involve just deleting the file corresponding to that branch in refs/heads
+      - hgit branch "branchname" : creates a new branch that points to the commit pointed to by the file pointed to by Head ptr
+      - hgit branch -d="branchname": deletes the branch specified, and this would have to be a branch that the user is not currently on. Would involve just deleting the file corresponding to that branch in refs/heads
   - hgit switch: same functionality as hgit checkout via hgit switch "existing branchname"
   - hgit log: in reverse chronological order, give commit hash, current branch pointed to by Head, and then for each commit (assume only one parent for now since we will be implementing merge second block) list author name and email, timestamp of commit, and the commit message. When we do implement merge this will involve just picking the one parent, the branch into which the merge was made.
   - hgit status: Says what branch you're on and has 3 sections:
     - Changes to be committed: includes new files, modified files, deleted files
     - Changes not staged for commit: includes modified and deleted files (same file can be in changes to be committed and this section if you staged it and then made changes or deleted it)
     - Untracked files: files that haven't been staged, which includes new files, also ignored files if we ever implement .gitignore type functionality
+
+ **NOTE**: flags with required arguments must be followed by an equals sign as shown above
