@@ -88,7 +88,7 @@ handleAdd flags args = do
   indexMap <- readIndexFile
   updatedIndexMapResult <- updateIndex indexMap args flags
   case updatedIndexMapResult of
-    Left err -> throwIO $ userError $ show err
+    Left err -> throwIO $ CommandError $ show err
     Right updatedIndexMap -> do
       writeIndexFile updatedIndexMap
       return ""
@@ -123,8 +123,8 @@ handleBranch flags args = do
         [branchName] -> do
           createBranch branchName
           return $ "Branch '" ++ branchName ++ "' created."
-        _ -> throwIO $ userError "Invalid usage of 'hgit branch'."
-    _ -> throwIO $ userError "Invalid usage of 'hgit branch'."
+        _ -> throwIO $ CommandError "Invalid usage of 'hgit branch'."
+    _ -> throwIO $ CommandError "Invalid usage of 'hgit branch'."
 
 -- | Handles the log command
 handleLogCommand :: IO String
