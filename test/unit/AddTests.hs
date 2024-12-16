@@ -1,3 +1,6 @@
+-- | AddTests.hs
+-- | This file contains the implementation of the add tests
+
 {-# LANGUAGE OverloadedStrings #-}
 
 module AddTests

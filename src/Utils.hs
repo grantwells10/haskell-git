@@ -1,3 +1,7 @@
+-- | Utils.hs
+-- | This file contains the implementation of the utility functions for 
+-- | the hgit system
+
 {-# LANGUAGE OverloadedStrings #-}
 
 module Utils

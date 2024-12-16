@@ -1,4 +1,4 @@
--- | Commit module
+-- | Commit.hs
 -- | This module contains the logic for creating, reading, and updating commits.
 -- | Additionally, it contains the logic for checking out commits and trees.
 

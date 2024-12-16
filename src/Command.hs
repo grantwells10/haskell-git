@@ -1,6 +1,7 @@
--- | Command module
--- This module defines the supported commands and flags for the hgit system.
--- It also includes validation functions for each command.
+-- | Command.hs
+-- | This file contains the implementation of the command module
+-- | It defines the supported commands and flags for the hgit system
+-- | It also includes validation functions for each command
 
 module Command (
   Command(..),

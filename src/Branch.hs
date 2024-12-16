@@ -1,3 +1,7 @@
+-- | Branch.hs
+-- | This file contains the implementation of the branch command
+-- | It allows for creating, listing, and deleting branches
+
 {-# LANGUAGE OverloadedStrings #-}
 
 module Branch

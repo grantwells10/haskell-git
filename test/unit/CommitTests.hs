@@ -1,3 +1,6 @@
+-- | CommitTests.hs
+-- | This file contains the implementation of the commit tests
+
 {-# LANGUAGE OverloadedStrings #-}
 
 module CommitTests

@@ -1,3 +1,6 @@
+-- | Test.hs
+-- | This file contains the implementation of the test module
+
 import AddTests (addTests)
 import CommitTests (commitTests)
 import InitTests (initTests)

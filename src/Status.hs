@@ -1,3 +1,7 @@
+-- | Status.hs
+-- | This file contains the implementation of the status command
+-- | It computes the status of the repository and formats the output
+
 module Status
   ( getCurrentBranchName,
     getHEADTreeMap,

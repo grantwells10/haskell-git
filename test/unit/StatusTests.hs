@@ -1,3 +1,6 @@
+-- | StatusTests.hs
+-- | This file contains the implementation of the status tests
+
 {-# LANGUAGE OverloadedStrings #-}
 
 module StatusTests

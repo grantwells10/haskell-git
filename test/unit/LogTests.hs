@@ -1,3 +1,6 @@
+-- | LogTests.hs
+-- | This file contains the implementation of the log tests
+
 {-# LANGUAGE OverloadedStrings #-}
 
 module LogTests

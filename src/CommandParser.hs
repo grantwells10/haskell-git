@@ -1,7 +1,8 @@
--- | CommandParser module
--- This module defines the command parser for the hgit system.
--- It parses the input command and flags, and validates them.
--- It also defines the data type for the parsed command.
+-- | CommandParser.hs
+-- | This file contains the implementation of the command parser
+-- | It parses the input command and flags, and validates them
+-- | It also defines the data type for the parsed command
+-- | Supports RawCommand to ParsedCommand conversion
 
 module CommandParser (
   parseInput,

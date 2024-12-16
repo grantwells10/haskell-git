@@ -1,3 +1,6 @@
+-- | InitTests.hs
+-- | This file contains the implementation of the init tests
+
 {-# LANGUAGE OverloadedStrings #-}
 
 module InitTests

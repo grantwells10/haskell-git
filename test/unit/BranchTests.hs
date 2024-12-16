@@ -1,3 +1,6 @@
+-- | BranchTests.hs
+-- | This file contains the implementation of the branch tests
+
 {-# LANGUAGE OverloadedStrings #-}
 
 module BranchTests

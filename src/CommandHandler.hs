@@ -1,3 +1,7 @@
+-- | CommandHandler.hs
+-- | This file contains the implementation of the command handler
+-- | It handles the execution of commands and returns the appropriate output
+
 module CommandHandler (commandHandler) where
 
 import Command (Command (..), CommandError (..), Flag (..))

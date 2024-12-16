@@ -1,5 +1,5 @@
--- | ParserTests module
--- This module contains tests for the Parser module.
+-- | ParserTests.hs
+-- | This file contains the implementation of the parser tests
 
 module ParserTests
   ( parserTests,
@@ -41,6 +41,7 @@ import Test.QuickCheck
   )
 
 import Data.Maybe (mapMaybe, maybeToList)
+import qualified Text.Read.Lex as ParserTests
 
 -- | Arbitrary instance for RawCommand to test Parser
 instance Arbitrary RawCommand where
