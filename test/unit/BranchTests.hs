@@ -30,7 +30,7 @@ import Utils ( readFileAsByteString )
 -- | Asserts that a branch command fails with a CommandError
 assertBranchFailure :: [(String, Maybe String)] -> [String] -> IO ()
 assertBranchFailure flags args = do
-  result <- runCommand Branch flags args
+  result <- runCommand Command.Branch flags args
   case result of
     Left _ -> return () -- Expected to fail
     Right _ -> assertFailure "Expected branch command to fail, but it succeeded."

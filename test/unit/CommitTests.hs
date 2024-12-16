@@ -294,24 +294,14 @@ testHandleDeletedDirectory = TestCase $ withTestRepo $ \testDir -> do
 
     -- Commit after deletion
     commitWithMessage "Remove src directory"
-    headOid <- getHeadCommitOid testDir
 
-    -- Deserialize the latest commit
-    commitResult <- deserializeCommit headOid
-    case commitResult of
-        Left err -> assertFailure $ "Failed to deserialize commit: " ++ err
-        Right commit -> do
-            -- Deserialize the tree
-            treeResult <- deserializeTree (treeOid commit)
-            case treeResult of
-                Left err -> assertFailure $ "Failed to deserialize tree: " ++ err
-                Right tree -> do
-                    -- Read the updated index
-                    updatedIndex <- readIndexFile
-                    -- Verify 'src' and its contained files are no longer in the index
-                    let filesUnderSrc = ["src/main.hs", "src/utils/helpers.hs"]
-                    forM_ filesUnderSrc $ \file -> do
-                        assertBool (file ++ " should be removed from the index") (not $ Map.member file updatedIndex)
-                    -- Verify that other files are still present
-                    assertBool "file1.txt should still be in the index" (Map.member "file1.txt" updatedIndex)
-                    assertBool "file2.txt should still be in the index" (Map.member "file2.txt" updatedIndex)
+    -- Read the updated index
+    updatedIndex <- readIndexFile
+
+    -- Verify 'src' and its contained files are no longer in the index
+    let filesUnderSrc = ["src/main.hs", "src/utils/helpers.hs"]
+    forM_ filesUnderSrc $ \file -> do
+        assertBool (file ++ " should be removed from the index") (not $ Map.member file updatedIndex)
+    -- Verify that other files are still present
+    assertBool "file1.txt should still be in the index" (Map.member "file1.txt" updatedIndex)
+    assertBool "file2.txt should still be in the index" (Map.member "file2.txt" updatedIndex)

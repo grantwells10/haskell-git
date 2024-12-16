@@ -64,6 +64,7 @@ countCommitsInLog logOutput =
 trimSpaces :: String -> String
 trimSpaces = reverse . dropWhile (== ' ') . reverse . dropWhile (== ' ')
 
+-- | Helper function to extract the commit message from a commit section
 extractCommitMessage :: String -> String
 extractCommitMessage section =
   let linesOfSection = lines section
@@ -76,16 +77,8 @@ extractCommitMessage section =
 -- | Test that 'hgit log' outputs "No commits found." when there are no commits
 testLogNoCommits :: Test
 testLogNoCommits = TestCase $ withTestRepo $ \_testDir -> do
-  -- Construct the ParsedCommand
-  let parsedLogCmd = ParsedCommand
-                      { cmd = Command.Log
-                      , parsedFlags = []
-                      , parsedArguments = []
-                      }
-
-  -- Invoke the 'log' command
-  logResult <- commandHandler parsedLogCmd
-
+  
+  logResult <- runCommand Command.Log [] []
   -- Check the output
   case logResult of
     Left err -> assertFailure $ "Log command failed: " ++ show err
@@ -103,15 +96,7 @@ testLogSingleCommit = TestCase $ withTestRepo $ \_testDir -> do
   runCommand Command.Add [] ["file1.txt"]
   runCommand Command.Commit [("message", Just "Initial commit")] []
 
-  -- Construct the ParsedCommand
-  let parsedLogCmd = ParsedCommand
-                      { cmd = Command.Log
-                      , parsedFlags = []
-                      , parsedArguments = []
-                      }
-
-  -- Invoke the 'log' command
-  logResult <- commandHandler parsedLogCmd
+  logResult <- runCommand Command.Log [] []
 
   -- Check the output
   case logResult of
@@ -148,15 +133,7 @@ testLogMultipleCommits = TestCase $ withTestRepo $ \_testDir -> do
   runCommand Command.Add [] ["file4.txt"]
   runCommand Command.Commit [("message", Just "Third commit")] []
 
-  -- Construct the ParsedCommand
-  let parsedLogCmd = ParsedCommand
-                      { cmd = Command.Log
-                      , parsedFlags = []
-                      , parsedArguments = []
-                      }
-
-  -- Invoke the 'log' command
-  logResult <- commandHandler parsedLogCmd
+  logResult <- runCommand Command.Log [] []
 
   -- Check the output
   case logResult of
@@ -185,15 +162,7 @@ testLogCommitMessages = TestCase $ withTestRepo $ \_testDir -> do
   runCommand Command.Add [] ["file3.txt"]
   runCommand Command.Commit [("message", Just "Second commit")] []
 
-  -- Construct the ParsedCommand
-  let parsedLogCmd = ParsedCommand
-                      { cmd = Command.Log
-                      , parsedFlags = []
-                      , parsedArguments = []
-                      }
-
-  -- Invoke the 'log' command
-  logResult <- commandHandler parsedLogCmd
+  logResult <- runCommand Command.Log [] []
 
   -- Check the output
   case logResult of
