@@ -9,6 +9,33 @@ A lightweight, pure Haskell library implementing core Git functionality for loca
 
 Git supports a number of commands, easily over a 100, of these, less than half are considered porcelain commands, high-level commands which most Git users are likely to be familiar with. The rest are known as plumbing commands and represent low-level operations which are most often used for scripting. For our project, we will implement a subset of the porcelain commands.
 
+## Modules 
+
+_app/_
+**Main.hs** -> Main entry point for the program, parse command line input and activate corresponding functionality
+_src/_
+**Command.hs** -> Defining command data type constructors as well as corresponding functions (description, flags, validate)
+**CommandHandler.hs** -> handling each command, calling the smaller functions from other modules
+**CommandParser.hs** -> Logic for a generalized command line input parser- extracting command, flags, and arguments from strings and creating ParsedCommands
+**Commit.hs** -> Commit and commit tree logic
+**Branch.hs** -> Branching logic 
+**Index.hs** -> Handling staging for add, dealing with the index file 
+**Status.hs** -> Similar to index, status specific reading/formatting from index file 
+**Utils** -> Utility functions used throughout the program
+**TestUtils.hs** -> Utility functions specific for testing
+_test_/
+**Test**
+_test/unit/_
+**ParserTests.hs** -> Parser tests, command validation tests, essentially verifying the raw command line input -> ParsedCommand ppipeline. Includes property based testing
+**InitTests.hs** -> Testing hgit init functionality
+**AddTests.hs** -> Testing hgit add functionality
+**CommitTests.hs** -> Testing hgit commit functionality
+**BranchTests.hs** -> Testing hgit branch functionality
+**LogTests.hs** -> Testing hgit log functionality
+**SwitchTests.hs** -> Testing hgit switch functionality
+**StatusTests.hs** -> Testing hgit status functionality
+**UtilTests.hs** -> Testing our general utility functions 
+
 ## Object Model & Workflow
 
 User calls _git init_ which creates a _.hgit_ directory in the current directory. This directory will initially contain:
