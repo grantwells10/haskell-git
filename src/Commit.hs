@@ -28,7 +28,10 @@ import Utils
     getHEADFilePath,
     getHgitPath,
     readAndDecompressObject,
-    stringToByteString, createDirectoryIfMissing', sha1Hash,
+    stringToByteString,
+    createDirectoryIfMissing',
+    sha1Hash,
+    readFileAsByteString
   )
 import Data.Time.LocalTime (TimeZone, utcToLocalTime, getCurrentTimeZone)
 import Control.Exception (throwIO)
@@ -217,30 +220,38 @@ traverseCommits oid acc = do
         Nothing -> formatCommits newAcc
         Just parent -> traverseCommits parent newAcc
 
--- | Format commits
 formatCommits :: [Commit] -> IO String
 formatCommits commits = do
-  tz <- getCurrentTimeZone
-  let reversedCommits = reverse commits
-      formatted = case reversedCommits of
-        [] -> []
-        (latest:rest) ->
-          formatCommitWithTZ tz latest True :
-          map (formatCommitWithTZ tz `flip` False) rest
-  return $ intercalate "\n\n" formatted
+    tz <- getCurrentTimeZone
+    let reversedCommits = reverse commits
+    formatted <- case reversedCommits of
+        [] -> return []
+        (latest:rest) -> do
+            latestStr <- formatCommitWithTZ tz latest True
+            restStrs <- mapM (\c -> formatCommitWithTZ tz c False) rest
+            return (latestStr : restStrs)
+    return $ intercalate "\n\n" formatted
 
 -- | Format an individual commit with timezone
-formatCommitWithTZ :: TimeZone -> Commit -> Bool -> String
-formatCommitWithTZ tz commit isHead =
-  let epochStr = timestamp commit
-      epochTime = read epochStr :: Int
-      utcTime = posixSecondsToUTCTime (fromIntegral epochTime)
-      localTime = utcToLocalTime tz utcTime
-      dateString = formatTime defaultTimeLocale "%a %b %e %T %Y %z" localTime
-      headIndicator = if isHead then " (HEAD -> main)" else ""
-  in "commit " ++ treeOid commit ++ headIndicator ++ "\n" ++
-     "Date:   " ++ dateString ++ "\n\n" ++
-     "    " ++ message commit
+formatCommitWithTZ :: TimeZone -> Commit -> Bool -> IO String
+formatCommitWithTZ tz commit isHead = do
+    currentBranch <- if isHead
+        then do
+            headContent <- readFileAsByteString =<< getHEADFilePath
+            -- Strip the ByteString first, then convert to String
+            let branchPath = BS8.unpack $ BS8.strip headContent
+            return $ " (HEAD -> " ++ drop (length "refs/heads/") branchPath ++ ")"
+        else return ""
+
+    let epochStr = timestamp commit
+        epochTime = read epochStr :: Int
+        utcTime = posixSecondsToUTCTime (fromIntegral epochTime)
+        localTime = utcToLocalTime tz utcTime
+        dateString = formatTime defaultTimeLocale "%a %b %e %T %Y %z" localTime
+
+    return $ "commit " ++ treeOid commit ++ currentBranch ++ "\n" ++
+             "Date:   " ++ dateString ++ "\n\n" ++
+             "    " ++ message commit
 
 -- | Checkout a tree
 checkoutTree :: Tree -> FilePath -> IO (Map FilePath String)
