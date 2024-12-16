@@ -9,8 +9,6 @@ import TestUtils
   ( withTestRepo,
     createFiles,
     runCommand,
-    runAddCommand,
-    runCommitCommand,
     verifyIndex
   )
 import System.Directory
@@ -25,22 +23,17 @@ import Data.Map.Strict qualified as Map
 import Data.List (sort, isInfixOf)
 import Utils (getHgitPath, stringToByteString, writeFileFromByteString, readFileAsByteString)
 
-runSwitchCommand :: [String] -> IO (Either CommandError String)
-runSwitchCommand args = do
-  runCommand Switch [] args
-
-
 testSwitchNonExistentBranch :: Test
 testSwitchNonExistentBranch = TestCase $ withTestRepo $ \testDir -> do
   let files = [("file1.txt", "Hello")]
   createFiles files
-  runAddCommand [] ["file1.txt"]
-  runCommitCommand [("message", Just "Initial commit")] []
+  runCommand Command.Add [] ["file1.txt"]
+  runCommand Command.Commit [("message", Just "Initial commit")] []
 
   originalIndex <- readIndexFile
   originalFiles <- getAllFiles
 
-  result <- runSwitchCommand ["no-such-branch"]
+  result <- runCommand Command.Switch [] ["no-such-branch"]
   case result of
     Left (CommandError msg) -> do
       assertBool "Error message should mention branch not existing" ("does not exist" `isInfixOf` msg)
@@ -57,13 +50,13 @@ testSwitchSameBranch = TestCase $ withTestRepo $ \testDir -> do
 
   let files = [("file1.txt", "Hello")]
   createFiles files
-  runAddCommand [] ["file1.txt"]
-  runCommitCommand [("message", Just "Initial commit")] []
+  runCommand Command.Add [] ["file1.txt"]
+  runCommand Command.Commit [("message", Just "Initial commit")] []
 
   originalIndex <- readIndexFile
   originalFiles <- getAllFiles
 
-  result <- runSwitchCommand ["main"]
+  result <- runCommand Command.Switch [] ["main"]
   case result of
     Left err -> assertFailure $ "Switching to same branch should not fail: " ++ show err
     Right _ -> return ()
@@ -82,26 +75,26 @@ testSwitchDifferentBranch = TestCase $ withTestRepo $ \testDir -> do
           ("file2.txt", "World")
         ]
   createFiles filesMain
-  runAddCommand [] ["file1.txt", "file2.txt"]
-  runCommitCommand [("message", Just "Initial commit on main")] []
+  runCommand Command.Add [] ["file1.txt", "file2.txt"]
+  runCommand Command.Commit [("message", Just "Initial commit on main")] []
 
   mainIndex <- readIndexFile
   mainFiles <- getAllFiles
 
-  resBranch <- runCommand Branch [] ["feature"]
+  resBranch <- runCommand Command.Branch [] ["feature"]
   case resBranch of
     Left (CommandError err) -> assertFailure $ "Branch creation failed: " ++ err
     Right _ -> return ()
 
-  resSwitchFeature <- runSwitchCommand ["feature"]
+  resSwitchFeature <- runCommand Command.Switch [] ["feature"]
   case resSwitchFeature of
     Left (CommandError err) -> assertFailure $ "Switch to feature should succeed: " ++ err
     Right _ -> return ()
 
   let filesFeature = [("file2.txt", "World-Updated"), ("file3.txt", "New file on feature")]
   createFiles filesFeature
-  runAddCommand [] ["file2.txt", "file3.txt"]
-  runCommitCommand [("message", Just "Commit on feature branch")] []
+  runCommand Command.Add [] ["file2.txt", "file3.txt"]
+  runCommand Command.Commit [("message", Just "Commit on feature branch")] []
 
   featureIndex <- readIndexFile
   featureFiles <- getAllFiles
@@ -111,7 +104,7 @@ testSwitchDifferentBranch = TestCase $ withTestRepo $ \testDir -> do
   assertBool "Files should differ after switching to feature and committing"
     (sort featureFiles /= sort mainFiles)
 
-  resSwitchMain <- runSwitchCommand ["main"]
+  resSwitchMain <- runCommand Command.Switch [] ["main"]
   case resSwitchMain of
     Left (CommandError err) -> assertFailure $ "Switching back to main should succeed: " ++ err
     Right _ -> return ()
@@ -123,11 +116,56 @@ testSwitchDifferentBranch = TestCase $ withTestRepo $ \testDir -> do
   assertEqual "Working directory should match original main state after switching back"
     (sort mainFiles) (sort newFiles)
 
+testSwitchWithUncommitedChanges :: Test
+testSwitchWithUncommitedChanges = TestCase $ withTestRepo $ \testDir -> do
+  -- Main branch
+  let filesMain = [("file1.txt", "Hello"), ("file2.txt", "World")]
+  createFiles filesMain
+  runCommand Command.Add [] ["file1.txt", "file2.txt"]
+  runCommand Command.Commit [("message", Just "Init commit on main")] []
+
+  mainIndex <- readIndexFile
+  mainFiles <- getAllFiles
+
+  -- New branch 
+  _ <- runCommand Command.Branch [] ["newBranch"]
+  switchTonewBranch <- runCommand Command.Switch [] ["newBranch"]
+  case switchTonewBranch of
+    Left (CommandError err) -> assertFailure $ "Switching to newBranch should succeed: " ++ err
+    Right _ -> return ()
+
+  newBranchIndexBeforeAdd <- readIndexFile
+  newBranchFilesBeforeAdd <- getAllFiles
+
+  -- Add on newBranch but don't commit
+  let filesNewBranch = [("file3.txt", "Lebron James")]
+  createFiles filesNewBranch
+  runCommand Command.Add [] ["file3.txt"]
+
+  newBranchIndexAfterAdd <- readIndexFile
+  assertBool "Index should change after adding file" (newBranchIndexBeforeAdd /= newBranchIndexAfterAdd)
+
+  -- Now try to switch back to main (should fail)
+  switchToMain <- runCommand Command.Switch [] ["main"]
+  case switchToMain of
+    Left (CommandError msg) -> 
+      assertBool "Switching to main should fail" 
+      ("uncommitted changes" `isInfixOf` msg)
+    Right _ -> assertFailure "Switching to main should fail"
+
+  currIndex <- readIndexFile
+  currFiles <- getAllFiles
+
+  assertBool "Index should remain unchanged after failed switch" (newBranchIndexAfterAdd == currIndex)
+  assertBool "Working directory should remain unchanged after failed switch"
+    (sort (newBranchFilesBeforeAdd ++ ["file3.txt"]) == sort currFiles)
+
 switchTests :: Test
 switchTests = 
   TestLabel "Switch Command Tests" $
     TestList
       [ TestLabel "Switch Non-Existent Branch" testSwitchNonExistentBranch,
         TestLabel "Switch Same Branch" testSwitchSameBranch,
-        TestLabel "Switch Different Branch and Back" testSwitchDifferentBranch
+        TestLabel "Switch Different Branch and Back" testSwitchDifferentBranch,
+        TestLabel "Switch with Uncommitted Changes" testSwitchWithUncommitedChanges
       ]

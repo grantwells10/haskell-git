@@ -21,8 +21,6 @@ import Test.HUnit ( assertEqual, assertFailure, Test(..) )
 import TestUtils
     ( createFiles,
       runCommand,
-      runAddCommand,
-      runCommitCommand,
       withTestRepo )
 import Utils ( readFileAsByteString )
 
@@ -69,8 +67,8 @@ testBranchCreateExistingBranch = TestCase $ withTestRepo $ \testDir -> do
           ("file2.txt", "Initial commit file")
         ]
   createFiles files
-  runAddCommand [] ["file1.txt", "file2.txt"]
-  runCommitCommand [("message", Just "Initial commit")] []
+  runCommand Command.Add [] ["file1.txt", "file2.txt"]
+  runCommand Command.Commit [("message", Just "Initial commit")] []
 
   -- Create a branch named "feature"
   runBranchCreateCommand "feature"
@@ -87,8 +85,8 @@ testBranchCreateValid = TestCase $ withTestRepo $ \testDir -> do
           ("file2.txt", "Initial commit file")
         ]
   createFiles files
-  runAddCommand [] ["file1.txt", "file2.txt"]
-  runCommitCommand [("message", Just "Initial commit")] []
+  runCommand Command.Add [] ["file1.txt", "file2.txt"]
+  runCommand Command.Commit [("message", Just "Initial commit")] []
 
   -- Create a branch named "feature"
   runBranchCreateCommand "feature"
@@ -114,8 +112,8 @@ testBranchDeleteValid = TestCase $ withTestRepo $ \testDir -> do
           ("file2.txt", "Initial commit file")
         ]
   createFiles files
-  runAddCommand [] ["file1.txt", "file2.txt"]
-  runCommitCommand [("message", Just "Initial commit")] []
+  runCommand Command.Add [] ["file1.txt", "file2.txt"]
+  runCommand Command.Commit [("message", Just "Initial commit")] []
 
   -- Create a branch named "feature"
   runBranchCreateCommand "feature"
@@ -144,8 +142,8 @@ testBranchDeleteCurrent = TestCase $ withTestRepo $ \testDir -> do
           ("file2.txt", "Initial commit file")
         ]
   createFiles files
-  runAddCommand [] ["file1.txt", "file2.txt"]
-  runCommitCommand [("message", Just "Initial commit")] []
+  runCommand Command.Add [] ["file1.txt", "file2.txt"]
+  runCommand Command.Commit [("message", Just "Initial commit")] []
 
   -- Attempt to delete the current branch "main"
   -- Expect failure
@@ -163,8 +161,8 @@ testBranchListMultiple = TestCase $ withTestRepo $ \testDir -> do
           ("file2.txt", "Initial commit file")
         ]
   createFiles files
-  runAddCommand [] ["file1.txt", "file2.txt"]
-  runCommitCommand [("message", Just "Initial commit")] []
+  runCommand Command.Add [] ["file1.txt", "file2.txt"]
+  runCommand Command.Commit [("message", Just "Initial commit")] []
 
   -- Create multiple branches
   runBranchCreateCommand "feature"
@@ -184,14 +182,14 @@ testBranchCreateAfterCommit = TestCase $ withTestRepo $ \testDir -> do
           ("file2.txt", "Initial commit file")
         ]
   createFiles files1
-  runAddCommand [] ["file1.txt", "file2.txt"]
-  runCommitCommand [("message", Just "Initial commit")] []
+  runCommand Command.Add [] ["file1.txt", "file2.txt"]
+  runCommand Command.Commit [("message", Just "Initial commit")] []
 
   -- Make a second commit
   let files2 = [("file3.txt", "New file in second commit")]
   createFiles files2
-  runAddCommand [] ["file3.txt"]
-  runCommitCommand [("message", Just "Second commit")] []
+  runCommand Command.Add [] ["file3.txt"]
+  runCommand Command.Commit [("message", Just "Second commit")] []
 
   -- Create a branch named "feature" pointing to the second commit
   runBranchCreateCommand "feature"

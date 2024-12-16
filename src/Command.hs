@@ -90,7 +90,7 @@ validateCommitCommand :: [(String, Maybe String)] -> [String] -> Either CommandE
 validateCommitCommand flags args =
   case (flags, args) of
     ([("message", Just msg)], []) | not (null msg) -> Right ()
-    _ -> Left $ CommandError "Invalid usage of 'hgit commit'. Use 'hgit commit -m \"msg\"'.'"
+    _ -> Left $ CommandError "Invalid usage of 'hgit commit'. Use 'hgit commit -m=\"msg\"'.'"
 
 -- | Validate the branch command
 validateBranchCommand :: [(String, Maybe String)] -> [String] -> Either CommandError ()

@@ -25,8 +25,6 @@ import Test.HUnit
 import TestUtils
     ( createFiles,
       runCommand,
-      runAddCommand,
-      runCommitCommand,
       withTestRepo )
 import Utils ( getHeadCommitOid )
 import System.Directory (removeFile, removeDirectoryRecursive)
@@ -61,16 +59,26 @@ createAndAddFiles :: [(FilePath, String)] -> IO ()
 createAndAddFiles files = do
   createFiles files
   let filePaths = map fst files
-  runAddCommand [] filePaths
+  result <- runCommand Command.Add [] filePaths
+  case result of
+    Left err -> error $ "Failed to add files: " ++ show err
+    Right _ -> return ()
 
 -- | Helper function to perform commit with a message
 commitWithMessage :: String -> IO ()
 commitWithMessage msg = do
-  runCommitCommand [("message", Just msg)] []
+  result <- runCommand Command.Commit [("message", Just msg)] []
+  case result of
+    Left err -> error $ "Failed to commit: " ++ show err
+    Right _ -> return ()
 
 -- | Helper function to perform commit with flags and arguments
 commitWithFlags :: [(String, Maybe String)] -> [String] -> IO ()
-commitWithFlags = runCommitCommand
+commitWithFlags flags args = do
+  result <- runCommand Command.Commit flags args
+  case result of
+    Left err -> error $ "Failed to commit: " ++ show err
+    Right _ -> return ()
 
 -- | Collection of all commit tests
 commitTests :: Test
@@ -255,8 +263,7 @@ testHandleDeletedFiles = TestCase $ withTestRepo $ \testDir -> do
     removeFile "file1.txt"
 
     -- Add changes (which includes deletion)
-    runAddCommand [] ["file1.txt"]
-
+    runCommand Command.Add [] ["file1.txt"]
     -- Read the updated index
     updatedIndex <- readIndexFile
     -- Verify 'file1.txt' is no longer in the index and that 'file2.txt' is still there
@@ -280,7 +287,7 @@ testHandleDeletedDirectory = TestCase $ withTestRepo $ \testDir -> do
     removeDirectoryRecursive "src"
 
     -- Add changes (which includes directory deletion)
-    runAddCommand [] ["src"] -- Attempt to add the deleted directory
+    runCommand Command.Add [] ["src"] -- Attempt to add the deleted directory
 
     -- Commit after deletion
     commitWithMessage "Remove src directory"

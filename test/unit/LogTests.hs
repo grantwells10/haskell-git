@@ -24,8 +24,6 @@ import Test.HUnit
     Test(TestList) )
 import TestUtils
   ( createFiles,
-    runAddCommand,
-    runCommitCommand,
     runCommand,
     withTestRepo )
 import Utils ( readFileAsByteString, getHeadCommitOid )
@@ -99,8 +97,8 @@ testLogSingleCommit = TestCase $ withTestRepo $ \_testDir -> do
         [ ("file1.txt", "Hello World")
         ]
   createFiles initialFiles
-  runAddCommand [] ["file1.txt"]
-  runCommitCommand [("message", Just "Initial commit")] []
+  runCommand Command.Add [] ["file1.txt"]
+  runCommand Command.Commit [("message", Just "Initial commit")] []
 
   -- Construct the ParsedCommand
   let parsedLogCmd = ParsedCommand
@@ -128,24 +126,24 @@ testLogMultipleCommits = TestCase $ withTestRepo $ \_testDir -> do
           ("file2.txt", "Initial commit file")
         ]
   createFiles files1
-  runAddCommand [] ["file1.txt", "file2.txt"]
-  runCommitCommand [("message", Just "Initial commit")] []
+  runCommand Command.Add [] ["file1.txt", "file2.txt"]
+  runCommand Command.Commit [("message", Just "Initial commit")] []
 
   -- Create and commit second file
   let files2 =
         [ ("file3.txt", "Second commit file")
         ]
   createFiles files2
-  runAddCommand [] ["file3.txt"]
-  runCommitCommand [("message", Just "Second commit")] []
+  runCommand Command.Add [] ["file3.txt"]
+  runCommand Command.Commit [("message", Just "Second commit")] []
 
   -- Create and commit third file
   let files3 =
         [ ("file4.txt", "Third commit file")
         ]
   createFiles files3
-  runAddCommand [] ["file4.txt"]
-  runCommitCommand [("message", Just "Third commit")] []
+  runCommand Command.Add [] ["file4.txt"]
+  runCommand Command.Commit [("message", Just "Third commit")] []
 
   -- Construct the ParsedCommand
   let parsedLogCmd = ParsedCommand
@@ -173,16 +171,16 @@ testLogCommitMessages = TestCase $ withTestRepo $ \_testDir -> do
           ("file2.txt", "Initial commit file")
         ]
   createFiles files1
-  runAddCommand [] ["file1.txt", "file2.txt"]
-  runCommitCommand [("message", Just "Initial commit")] []
+  runCommand Command.Add [] ["file1.txt", "file2.txt"]
+  runCommand Command.Commit [("message", Just "Initial commit")] []
 
   -- Create and commit second file
   let files2 =
         [ ("file3.txt", "Second commit file")
         ]
   createFiles files2
-  runAddCommand [] ["file3.txt"]
-  runCommitCommand [("message", Just "Second commit")] []
+  runCommand Command.Add [] ["file3.txt"]
+  runCommand Command.Commit [("message", Just "Second commit")] []
 
   -- Construct the ParsedCommand
   let parsedLogCmd = ParsedCommand

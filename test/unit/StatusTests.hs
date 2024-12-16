@@ -9,9 +9,7 @@ import Test.HUnit ( assertBool, assertFailure, Test(..) )
 import TestUtils
     ( withTestRepo,
       createFiles,
-      runCommand,
-      runAddCommand,
-      runCommitCommand
+      runCommand
     )
 import Command (CommandError(..), Command ( .. ))
 import System.Directory (removeFile)
@@ -29,7 +27,7 @@ testStatusExtendedScenario = TestCase $ withTestRepo $ \testDir -> do
   -- let statusCmd = head $ filter (\c -> subcommand c == "status") letCommands
 
   -- Step 1: Immediately after init, we should be on branch main with no changes
-  result1 <- runCommand Status [] []
+  result1 <- runCommand Command.Status [] []
   case result1 of
     Left (CommandError err) -> assertFailure $ "status failed unexpectedly: " ++ err
     Right output -> do
@@ -55,7 +53,7 @@ testStatusExtendedScenario = TestCase $ withTestRepo $ \testDir -> do
       mapM_ (\f -> assertBool (f ++ " should be untracked") (f `isInfixOf` output)) ["file1.txt", "file2.txt", "dir/subfile1.txt", "dir/subfile2.txt"]
 
   -- Step 3: Stage some files (file1.txt and all under dir/)
-  runAddCommand [] ["file1.txt", "dir"]
+  runCommand Command.Add [] ["file1.txt", "dir"]
   result3 <- runCommand Command.Status [] []
   case result3 of
     Left (CommandError err) -> assertFailure $ "status failed unexpectedly: " ++ err
@@ -82,8 +80,8 @@ testStatusExtendedScenario = TestCase $ withTestRepo $ \testDir -> do
 
   -- Step 5: Commit the staged changes (which includes dir/subfile2.txt but not the modified ones since we didn't re-add them)
   -- First, re-add file1.txt and dir/subfile1.txt to stage their modifications
-  runAddCommand [] ["file1.txt", "dir/subfile1.txt"]
-  runCommitCommand [("message", Just "Initial commit")] []
+  runCommand Command.Add [] ["file1.txt", "dir/subfile1.txt"]
+  runCommand Command.Commit [("message", Just "Initial commit")] []
 
   -- After running runCommitCommand [("message", Just "Initial commit")] []
 -- Check status again
@@ -113,7 +111,7 @@ testStatusExtendedScenario = TestCase $ withTestRepo $ \testDir -> do
       assertBool "dir/subfile2.txt deleted not staged" ("deleted:   dir/subfile2.txt" `isInfixOf` output)
 
   -- Step 7: Stage the deletions
-  runAddCommand [] ["file1.txt", "dir/subfile2.txt"]
+  runCommand Command.Add [] ["file1.txt", "dir/subfile2.txt"]
 
   result7 <- runCommand Command.Status [] []
   case result7 of

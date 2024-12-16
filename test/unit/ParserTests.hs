@@ -202,8 +202,14 @@ testParseInput =
           ),
       "Parse 'init' with unexpected args"
         ~: parseInput ["init", "extra"]
-        ~?= Left (CommandError "This command does not accept any flags or arguments."),
-      "Parse 'commit' with message flag"
+        ~?= Left (CommandError "This command does not accept any flags or arguments.")
+    ]
+
+-- | Testing parseInput with required flag
+testParseInputRequiredFlag :: Test
+testParseInputRequiredFlag = 
+  TestList
+    [ "Parse 'commit' with message flag"
         ~: parseInput ["commit", "--message=", "test"]
         ~?= Right
           ( ParsedCommand
@@ -211,7 +217,40 @@ testParseInput =
                 parsedFlags = [("message", Just "test")],
                 parsedArguments = []
               }
-          )
+          ),
+      "Parse 'commit' with message flag with no space after ="
+        ~: parseInput ["commit", "--message=test2"]
+        ~?= Right
+          ( ParsedCommand
+              { cmd = Command.Commit,
+                parsedFlags = [("message", Just "test2")],
+                parsedArguments = []
+              }
+          ),
+      "Parse 'commit' with m flag with space after ="
+        ~: parseInput ["commit", "-m=", "test3"]
+        ~?= Right
+          ( ParsedCommand
+              { cmd = Command.Commit,
+                parsedFlags = [("message", Just "test3")],
+                parsedArguments = []
+              }
+          ),
+      "Parse 'commit' with m flag with no space after ="
+        ~: parseInput ["commit", "-m=test4"]
+        ~?= Right
+          ( ParsedCommand
+              { cmd = Command.Commit,
+                parsedFlags = [("message", Just "test4")],
+                parsedArguments = []
+              }
+          ),
+      "Parse 'commit' with invalid message flag format"
+        ~: parseInput ["commit", "--message", "test5"]
+        ~?= Left (CommandError "Invalid usage of 'hgit commit'. Use 'hgit commit -m=\"msg\"'.'"),
+      "Parse 'commit' with invalid short message flag format"
+        ~: parseInput ["commit", "-m", "test6"]
+        ~?= Left (CommandError "Invalid usage of 'hgit commit'. Use 'hgit commit -m=\"msg\"'.'")
     ]
 
 -- | Collection of all parser tests
@@ -222,5 +261,6 @@ parserTests =
       [ TestLabel "Parse Command" testValidateRawCommand,
         TestLabel "Parse Flags and Args" testParseFlagsAndArgs,
         TestLabel "Parse Input" testParseInput,
-        TestLabel "RawCommand to tokens" testRawCommandToTokens
+        TestLabel "RawCommand to tokens" testRawCommandToTokens,
+        TestLabel "Parse Input with required flag" testParseInputRequiredFlag
       ]

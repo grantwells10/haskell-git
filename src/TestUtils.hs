@@ -4,8 +4,6 @@ module TestUtils
   ( testValidate,
     createFiles,
     runCommand,
-    runAddCommand,
-    runCommitCommand,
     verifyIndex,
     verifyBlobExists,
     withTestRepo,
@@ -94,24 +92,6 @@ runCommand cmd flags args = do
             parsedArguments = args
           }
   commandHandler parsedCmd
-
--- | Runs the 'git add' command with given flags and arguments
-runAddCommand :: [(String, Maybe String)] -> [String] -> IO ()
-runAddCommand flags args = do
-  -- OLD IMPLEMENTATION
-  -- let addCmd = letCommands !! 1 -- "add" command
-  resultAdd <- runCommand Command.Add flags args
-  case resultAdd of
-    Left (CommandError err) -> assertFailure $ "Add command failed: " ++ err
-    Right _ -> return ()
-
--- | Runs the 'git commit' command with given flags and arguments
-runCommitCommand :: [(String, Maybe String)] -> [String] -> IO ()
-runCommitCommand flags args = do
-  resultCommit <- runCommand Command.Commit flags args
-  case resultCommit of
-    Left (CommandError err) -> assertFailure $ "Commit command failed: " ++ err
-    Right _ -> return ()
 
 -- | Verifies that specified files are present or absent in the index
 verifyIndex :: [(FilePath, Bool)] -> IO ()

@@ -1,3 +1,7 @@
+-- | Commit module
+-- | This module contains the logic for creating, reading, and updating commits.
+-- | Additionally, it contains the logic for checking out commits and trees.
+
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use newtype instead of data" #-}
@@ -213,6 +217,7 @@ traverseCommits oid acc = do
         Nothing -> formatCommits newAcc
         Just parent -> traverseCommits parent newAcc
 
+-- | Format commits
 formatCommits :: [Commit] -> IO String
 formatCommits commits = do
   tz <- getCurrentTimeZone
@@ -224,6 +229,7 @@ formatCommits commits = do
           map (formatCommitWithTZ tz `flip` False) rest
   return $ intercalate "\n\n" formatted
 
+-- | Format an individual commit with timezone
 formatCommitWithTZ :: TimeZone -> Commit -> Bool -> String
 formatCommitWithTZ tz commit isHead =
   let epochStr = timestamp commit
@@ -236,11 +242,12 @@ formatCommitWithTZ tz commit isHead =
      "Date:   " ++ dateString ++ "\n\n" ++
      "    " ++ message commit
 
+-- | Checkout a tree
 checkoutTree :: Tree -> FilePath -> IO (Map FilePath String)
 checkoutTree (Tree entries) dir = do
-  indexMaps <- forM entries $ \(typ, oid, name) -> do
+  indexMaps <- forM entries $ \(otype, oid, name) -> do
     let path = if dir == "." then name else dir </> name
-    case typ of
+    case otype of
       "blob" -> do
         contentResult <- readAndDecompressObject oid
         case contentResult of
@@ -254,22 +261,26 @@ checkoutTree (Tree entries) dir = do
         case treeResult of
           Left err -> throwIO $ userError $ "Failed to deserialize subtree: " ++ err
           Right subtree -> checkoutTree subtree path
-      _ -> throwIO $ userError $ "Unknown object type in tree: " ++ typ
+      _ -> throwIO $ userError $ "Unknown object type in tree: " ++ otype
   return (Map.unions indexMaps)
 
-anyModifiedFile :: Map FilePath String -> IO Bool
-anyModifiedFile indexMap = do
-  or <$> mapM fileChanged (Map.toList indexMap)
-  where
-    fileChanged (path, oid) = do
-      exists <- doesFileExist path
-      if not exists
-        then return True -- file deleted => change
-        else do
-          content <- BS.readFile path
-          let currentOid = sha1Hash content
-          return (currentOid /= oid)
+  -- | Read only version of checkoutTree, map file path to oid
+treeToIndexMap :: Tree -> FilePath -> IO (Map FilePath String)
+treeToIndexMap (Tree entries) dir = do
+  indexMaps <- forM entries $ \(otype, oid, name) -> do
+    let path = if dir == "." then name else dir </> name
+    case otype of
+      "blob" ->
+        return $ Map.singleton path oid
+      "tree" -> do
+        subtreeResult <- deserializeTree oid
+        case subtreeResult of
+          Left err -> throwIO $ userError $ "Failed to deserialize subtree: " ++ err
+          Right subtree -> treeToIndexMap subtree path
+      _ -> throwIO $ userError $ "Unknown object type in tree: " ++ otype
+  return (Map.unions indexMaps)
 
+-- | Checkout a commit
 checkoutCommit :: String -> IO ()
 checkoutCommit commitOid = do
   commitResult <- deserializeCommit commitOid
@@ -284,6 +295,7 @@ checkoutCommit commitOid = do
           indexMap <- checkoutTree tree "."
           writeIndexFile indexMap
 
+-- | Clear the working directory
 clearWorkingDirectory :: IO ()
 clearWorkingDirectory = do
   allFiles <- getAllFiles
@@ -295,15 +307,45 @@ clearWorkingDirectory = do
       e <- doesFileExist fp
       when e (removeFile fp)
 
+-- | Check if there are any uncommitted changes to tracked file in order 
+-- to prevent switching branches with uncommitted changes
 uncommittedChangesExist :: IO Bool
 uncommittedChangesExist = do
   indexMap <- readIndexFile
-  allFiles <- getAllFiles
+  workingChanges <- anyModifiedFile indexMap
+  stagedChanges <- stagedChangesExist
+  return (workingChanges || stagedChanges)
 
-  let trackedFiles = Map.keys indexMap
-      untracked = filter (`notElem` trackedFiles) allFiles
+-- | Check if there are any modified files in the working directory
+anyModifiedFile :: Map FilePath String -> IO Bool
+anyModifiedFile indexMap = do
+  or <$> mapM fileChanged (Map.toList indexMap)
+  where
+    fileChanged (path, oid) = do
+      exists <- doesFileExist path
+      if not exists
+        then return True -- file deleted => change
+        else do
+          content <- BS.readFile path
+          let currentOid = sha1Hash content
+          return (currentOid /= oid)
 
-  if not (null untracked)
-    then return True
-    else do
-      anyModifiedFile indexMap
+-- | Check if there are any staged but uncommitted changes by comparing
+-- the current index with the HEAD commit
+stagedChangesExist :: IO Bool
+stagedChangesExist = do
+  indexMap <- readIndexFile
+  mHeadCommitOid <- getCurrentCommitOid
+  case mHeadCommitOid of
+    Nothing -> return (not $ Map.null indexMap)
+    Just headOid -> do
+      commitRes <- deserializeCommit headOid
+      case commitRes of
+        Left _ -> return False
+        Right commit -> do
+          treeRes <- deserializeTree (treeOid commit)
+          case treeRes of
+            Left _ -> return False
+            Right tree -> do
+              headIndexMap <- treeToIndexMap tree "."
+              return $ headIndexMap /= indexMap

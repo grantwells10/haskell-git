@@ -85,17 +85,15 @@ isFlag :: String -> Bool
 isFlag ('-' : _) = True
 isFlag _ = False
 
--- | Checks if a flag is an argument flag (starts with -- and has an = at the end)
+-- | Checks if a flag is an argument flag
 isArgFlag :: String -> Bool
-isArgFlag flag = "--" `isPrefixOf` flag && "=" `isSuffixOf` flag
+isArgFlag flag = '=' `elem` flag
 
 -- | Extracts the flag name from a flag token (e.g. "--update=" -> "update")
 extractFlagName :: String -> String
 extractFlagName flag = 
   let stripped = dropWhile (== '-') flag in
-  if "=" `isSuffixOf` stripped
-    then takeWhile (/= '=') stripped
-    else stripped
+  takeWhile (/= '=') stripped
 
 -- | Main flag parsing function stays the same but calls simplified functions
 parseFlagsAndArgs :: [String] -> Either CommandError ([(String, Maybe String)], [String])
@@ -113,22 +111,29 @@ parseTokens (x : xs) parsedFlags args seenArg
 
 -- | Processes a flag token, handling potential errors and flag values
 handleFlag ::
-  String ->      -- flag token (e.g. "--update" or "--message=")
+  String ->      -- flag token (e.g. "--update" or "--message=value")
   [String] ->    -- remaining tokens
   [(String, Maybe String)] ->  -- accumulated flags
   [String] ->    -- accumulated args
   Either CommandError ([(String, Maybe String)], [String])
 handleFlag flagToken rest parsedFlags args = 
     let rawName = extractFlagName flagToken 
-        mappedName = mapFlagName rawName allFlags in
+        mappedName = mapFlagName rawName allFlags
+        -- Split on '=' to check for immediate value
+        (flag, immediateValue) = span (/= '=') flagToken
+        value = case immediateValue of
+            ('=':val) -> if null val then Nothing else Just val
+            _ -> Nothing
+    in 
     if isArgFlag flagToken
-        then case rest of
-            -- If it's a "--flag=" format, next token must be the value
-            (value:remaining) -> 
+        then case (value, rest) of
+            (Just val, remaining) ->  -- Value immediately follows '='
+                parseTokens remaining ((mappedName, Just val) : parsedFlags) args False
+            (Nothing, value:remaining) ->  -- Value is in next token
                 parseTokens remaining ((mappedName, Just value) : parsedFlags) args False
-            [] -> Left $ CommandError $ "Flag " ++ rawName ++ " requires a value"
+            (Nothing, []) -> 
+                Left $ CommandError $ "Flag " ++ rawName ++ " requires a value followed by =."
         else
-            -- Regular flag without value
             parseTokens rest ((mappedName, Nothing) : parsedFlags) args False
 
 -- | Map a flag token to its long name if it's a short flag, otherwise return the original token
