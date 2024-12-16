@@ -1,7 +1,7 @@
 # Haskell Git (hgit)
 
-Grant Wells (gawells)
-
+Grant Wells (gawells), Sid Sannapareddy (sidsan)
+git 
 ## TL;DR 
 A lightweight, pure Haskell library implementing core Git functionality for local-only repositories.
 
